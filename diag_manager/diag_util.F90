@@ -2484,10 +2484,12 @@ CONTAINS
     ! If write time is greater (equal for the last call) than last_flush for this file, flush it
     IF ( final_call ) THEN
        IF ( time >= files(file)%last_flush ) THEN
+          CALL diag_flush(files(file)%file_unit)
           files(file)%last_flush = time
        END IF
     ELSE
        IF ( time > files(file)%last_flush .AND. (flush_nc_files.OR.debug_diag_manager) ) THEN
+          CALL diag_flush(files(file)%file_unit)
           files(file)%last_flush = time
        END IF
     END IF
