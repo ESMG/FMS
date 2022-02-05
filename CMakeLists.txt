@@ -19,11 +19,11 @@
 
 # Copyright (c) GFDL, @underwoo
 
-cmake_minimum_required(VERSION 3.7...3.15 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 
 # Define the CMake project
 project(FMS
-  VERSION 2021.02.0
+  VERSION 2021.04.0
   DESCRIPTION  "GFDL FMS Library"
   HOMEPAGE_URL "https://www.gfdl.noaa.gov/fms"
   LANGUAGES C Fortran)
@@ -61,6 +61,7 @@ option(INTERNAL_FILE_NML     "Enable compiler definition -DINTERNAL_FILE_NML"   
 option(ENABLE_QUAD_PRECISION "Enable compiler definition -DENABLE_QUAD_PRECISION"  ON)
 option(GFS_PHYS              "Enable compiler definition -DGFS_PHYS"              OFF)
 option(LARGEFILE             "Enable compiler definition -Duse_LARGEFILE"         OFF)
+option(WITH_YAML             "Enable compiler definition -Duse_yaml"              OFF)
 
 if(32BIT)
   list(APPEND kinds "r4")
@@ -83,6 +84,11 @@ if (OPENMP)
   find_package(OpenMP REQUIRED COMPONENTS C Fortran)
 endif()
 
+if (WITH_YAML)
+  find_package(libyaml REQUIRED)
+  include_directories(${LIBYAML_INCLUDE_DIR})
+endif ()
+
 # Collect FMS Fortran source files
 list(APPEND fms_fortran_src_files
   affinity/fms_affinity.F90
@@ -93,11 +99,13 @@ list(APPEND fms_fortran_src_files
   block_control/block_control.F90
   column_diagnostics/column_diagnostics.F90
   constants/constants.F90
+  constants/fmsconstants.F90
+  constants4/constants4.F90
+  constants4/fmsconstants4.F90
   coupler/atmos_ocean_fluxes.F90
   coupler/coupler_types.F90
   coupler/ensemble_manager.F90
-  data_override/get_grid_version_fms2io.F90
-  data_override/get_grid_version_mpp.F90
+  data_override/get_grid_version.F90
   data_override/data_override.F90
   diag_integral/diag_integral.F90
   diag_manager/diag_axis.F90
@@ -149,6 +157,7 @@ list(APPEND fms_fortran_src_files
   mpp/mpp_memutils.F90
   mpp/mpp_parameter.F90
   mpp/mpp_utilities.F90
+  parser/yaml_parser.F90
   platform/platform.F90
   random_numbers/mersennetwister.F90
   random_numbers/random_numbers.F90
@@ -169,18 +178,21 @@ list(APPEND fms_fortran_src_files
 # Collect FMS C source files
 list(APPEND fms_c_src_files
   affinity/affinity.c
+  fms/fms_c.c
   mosaic/create_xgrid.c
   mosaic/gradient_c2l.c
   mosaic/interp.c
   mosaic/mosaic_util.c
   mosaic/read_mosaic.c
   mpp/mpp_memuse.c
+  parser/yaml_parser_binding.c
 )
 
 # Collect FMS header files
 list(APPEND fms_header_files
   include/file_version.h
   include/fms_platform.h
+  fms/fms_c.h
 )
 
 # Standard FMS compiler definitions
@@ -198,6 +210,10 @@ endif()
 # Additional (optional) compiler definitions
 if(GFS_PHYS)
   list(APPEND fms_defs GFS_PHYS)
+endif()
+
+if(WITH_YAML)
+  list(APPEND fms_defs use_yaml)
 endif()
 
 if(INTERNAL_FILE_NML)
@@ -280,8 +296,8 @@ foreach(kind ${kinds})
     $<BUILD_INTERFACE:${moduleDir}>
     $<INSTALL_INTERFACE:${includeDir}>)
 
-  target_compile_definitions(${libTgt} PUBLIC "${fms_defs}")
-  target_compile_definitions(${libTgt} PUBLIC "${${kind}_defs}")
+  target_compile_definitions(${libTgt} PRIVATE "${fms_defs}")
+  target_compile_definitions(${libTgt} PRIVATE "${${kind}_defs}")
 
   target_link_libraries(${libTgt} PUBLIC NetCDF::NetCDF_Fortran
                                          MPI::MPI_Fortran)

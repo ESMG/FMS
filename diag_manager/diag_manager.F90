@@ -16,13 +16,12 @@
 !* You should have received a copy of the GNU Lesser General Public
 !* License along with FMS.  If not, see <http://www.gnu.org/licenses/>.
 !***********************************************************************
-
-!> @file
+!> @defgroup diag_manager_mod diag_manager_mod
+!> @ingroup diag_manager
 !! @brief diag_manager_mod is a set of simple calls for parallel diagnostics
 !!   on distributed systems. It is geared toward the writing of data in netCDF
-!!   format.
+!!   format. See @ref diag_manager for diag table information.
 !! @author Matt Harrison, Giang Nong, Seth Underwood
-!! @email gfdl.climate.model.info@noaa.gov
 !!
 !!   <TT>diag_manager_mod</TT> provides a convenient set of interfaces for
 !!   writing data to disk.  It is built upon the parallel I/O interface of FMS
@@ -36,17 +35,16 @@
 !!   <H4>Usage</H4>
 !!   Use of <TT>diag_manager</TT> includes the following steps:
 !!   <OL>
-!!     <LI> Create diag_table as described in the
-!!          <LINK SRC="diag_table.html">diag_table.F90</LINK>
+!!     <LI> Create diag_table as described in the @ref diag_table_mod
 !!          documentation.</LI>
-!!     <LI> Call <LINK SRC="#diag_manager_init"><TT>diag_manager_init</TT></LINK> to initialize
+!!     <LI> Call @ref diag_manager_init to initialize
 !!          diag_manager_mod.</LI>
-!!     <LI> Call <LINK SRC="#register_diag_field"><TT>register_diag_field</TT></LINK> to register the field to be
+!!     <LI> Call @ref register_diag_field to register the field to be
 !!          output.
 !!          <B>NOTE:</B> ALL fields in diag_table should be registered <I>BEFORE</I>
 !!          the first send_data call</LI>
-!!     <LI> Call <LINK SRC="#send_data"><TT>send_data</TT></LINK> to send data to output fields </LI>
-!!     <LI> Call <LINK SRC="#diag_manager_end"><TT>diag_manager_end</TT></LINK> to exit diag_manager </LI>
+!!     <LI> Call @ref send_data to send data to output fields </LI>
+!!     <LI> Call @ref diag_manager_end to exit diag_manager </LI>
 !!   </OL>
 !!
 !!   <H4>Features</H4>
@@ -59,18 +57,20 @@
 !!          misspelled module name or field name.</LI>
 !!     <LI> Check if a field is registered twice.</LI>
 !!     <LI> Check for duplicate lines in diag_table. </LI>
-!!     <LI> <LINK SRC="diag_table.html">diag_table</LINK> can contain fields
+!!     <LI> @ref diag_table_mod can contain fields
 !!          that are NOT written to any files. The file name in diag_table of
 !!          these fields is <TT>null</TT>.</LI>
 !!     <LI> By default, a field is output in its global grid.  The user can now
 !!          output a field in a specified region.  See
-!!          <LINK SRC="#send_data"><TT>send_data</TT></LINK> for more details.</LI>
+!!          @ref send_data for more details.</LI>
 !!     <LI> To check if the diag table is set up correctly, user should set
 !!          <TT>debug_diag_manager=.true.</TT> in diag_manager namelist, then
 !!          the the content of diag_table is printed in stdout.</LI>
-!!     <LI> New optional format of file information in <LINK SRC="diag_table.html">diag_table</LINK>.It is possible to have just
-!!           one file name and reuse it many times. A time string will be appended to the base file name each time a new file is
-!!          opened. The time string can be any combination from year to second of current model time.
+!!     <LI> New optional format of file information in @ref diag_table_mod.
+!!          It is possible to have just
+!!          one file name and reuse it many times. A time string will be appended to
+!!          the base file name each time a new file is opened. The time string can be
+!!          any combination from year to second of current model time.
 !!
 !!          Here is an example file line: <BR />
 !!          <PRE>"file2_yr_dy%1yr%3dy",2,"hours",1,"hours","Time", 10, "days", "1 1 7 0 0 0", 6, "hours"</PRE>
@@ -117,147 +117,25 @@
 !!          The namelist <B>default</B> value is <TT>mix_snapshot_average_fields=.false.</TT></LI>
 !!     <LI> Time average, Root Mean Square, Max and Min, and diurnal. In addition to time average users can also get then Root Mean Square, Max or Min value
 !!          during the same interval of time as time average. For this purpose, in the diag table users must replace
-!!          <TT>.true.</TT> or <TT>.false.</TT> by "<TT>rms</TT>, <TT>max</TT>" or "<TT>min</TT>".  <B><I>Note:</I></B> Currently, max
+!!          <TT>.true.</TT> or <TT>.false.</TT> by <TT>rms</TT>, <TT>max</TT> or <TT>min</TT>.  <B><I>Note:</I></B> Currently, max
 !!          and min are not available for regional output.
 !!
 !!          A diurnal average or the average of an integer power can also be requested using <TT>diurnal##</TT> or <TT>pow##</TT> where
 !!          <TT>##</TT> are the number of diurnal sections or integer power to average.</LI>
-!!     <LI> <TT>standard_name</TT> is added as optional argument in <LINK SRC="#register_diag_field"><TT>register_diag_field</TT>
-!!          </LINK>.</LI>
+!!     <LI> <TT>standard_name</TT> is added as optional argument in @ref register_diag_field. </LI>
 !!     <LI>When namelist variable <TT>debug_diag_manager = .true.</TT> array
-!!         bounds are checked in <LINK SRC="#send_data"><TT>send_data</TT></LINK>.</LI>
+!!         bounds are checked in @ref send_data.</LI>
 !!     <LI>Coordinate attributes can be written in the output file if the
-!!         argument "<TT>aux</TT>" is given in <LINK SRC="diag_axis.html#diag_axis_init"><TT>diag_axis_init</TT></LINK>. The
+!!         argument "<TT>aux</TT>" is given in @ref diag_axis_mod#diag_axis_init . The
 !!         corresponding fields (geolat/geolon) should also be written to the
 !!         same file.</LI>
 !!   </OL>
+
+!> @file
+!> @brief File for @ref diag_manager_mod
+
 MODULE diag_manager_mod
 use platform_mod
-  ! <CONTACT EMAIL="Matthew.Harrison@gfdl.noaa.gov">
-  !   Matt Harrison
-  ! </CONTACT>
-  ! <CONTACT EMAIL="Giang.Nong@noaa.gov">
-  !   Giang Nong
-  ! </CONTACT>
-  ! <CONTACT EMAIL="seth.underwood@noaa.gov">
-  !   Seth Underwood
-  ! </CONTACT>
-  ! <HISTORY SRC="http://www.gfdl.noaa.gov/fms-cgi-bin/cvsweb.cgi/FMS/" />
-  ! <OVERVIEW>
-  !   <TT>diag_manager_mod</TT> is a set of simple calls for parallel diagnostics
-  !   on distributed systems. It is geared toward the writing of data in netCDF
-  !   format.
-  ! </OVERVIEW>
-  ! <DESCRIPTION>
-  !   <TT>diag_manager_mod</TT> provides a convenient set of interfaces for
-  !   writing data to disk.  It is built upon the parallel I/O interface of FMS
-  !   code <TT>/shared/mpp/mpp_io.F90</TT>.
-  !
-  !   A single group of calls to the <TT>diag_manager_mod</TT> interfaces
-  !   provides data to disk at any number of sampling and/or averaging intervals
-  !   specified at run-time. Run-time specification of diagnostics are input
-  !   through the diagnostics table.
-  !
-  !   <H4>Usage</H4>
-  !   Use of <TT>diag_manager</TT> includes the following steps:
-  !   <OL>
-  !     <LI> Create diag_table as described in the
-  !          <LINK SRC="diag_table.html">diag_table.F90</LINK>
-  !          documentation.</LI>
-  !     <LI> Call <LINK SRC="#diag_manager_init"><TT>diag_manager_init</TT></LINK> to initialize
-  !          diag_manager_mod.</LI>
-  !     <LI> Call <LINK SRC="#register_diag_field"><TT>register_diag_field</TT></LINK> to register the field to be
-  !          output.
-  !          <B>NOTE:</B> ALL fields in diag_table should be registered <I>BEFORE</I>
-  !          the first send_data call</LI>
-  !     <LI> Call <LINK SRC="#send_data"><TT>send_data</TT></LINK> to send data to output fields </LI>
-  !     <LI> Call <LINK SRC="#diag_manager_end"><TT>diag_manager_end</TT></LINK> to exit diag_manager </LI>
-  !   </OL>
-  !
-  !   <H4>Features</H4>
-  !   Features of <TT>diag_manager_mod</TT>:
-  !   <OL>
-  !     <LI> Ability to output from 0D arrays (scalars) to 3D arrays.</LI>
-  !     <LI> Ability to output time average of fields that have time dependent
-  !          mask.</LI>
-  !     <LI> Give optional warning if <TT>register_diag_field</TT> fails due to
-  !          misspelled module name or field name.</LI>
-  !     <LI> Check if a field is registered twice.</LI>
-  !     <LI> Check for duplicate lines in diag_table. </LI>
-  !     <LI> <LINK SRC="diag_table.html">diag_table</LINK> can contain fields
-  !          that are NOT written to any files. The file name in diag_table of
-  !          these fields is <TT>null</TT>.</LI>
-  !     <LI> By default, a field is output in its global grid.  The user can now
-  !          output a field in a specified region.  See
-  !          <LINK SRC="#send_data"><TT>send_data</TT></LINK> for more details.</LI>
-  !     <LI> To check if the diag table is set up correctly, user should set
-  !          <TT>debug_diag_manager=.true.</TT> in diag_manager namelist, then
-  !          the the content of diag_table is printed in stdout.</LI>
-  !     <LI> New optional format of file information in <LINK SRC="diag_table.html">diag_table</LINK>.It is possible to have just
-  !          one file name and reuse it many times. A time string will be appended to the base file name each time a new file is
-  !          opened. The time string can be any combination from year to second of current model time.
-  !
-  !          Here is an example file line: <BR />
-  !          <PRE>"file2_yr_dy%1yr%3dy",2,"hours",1,"hours","Time", 10, "days", "1 1 7 0 0 0", 6, "hours"</PRE>
-  !          <BR />
-  !
-  !          From left to right we have:
-  !          <UL>
-  !            <LI>file name</LI>
-  !            <LI>output frequency</LI>
-  !            <LI>output frequency unit</LI>
-  !            <LI>Format (should always be 1)</LI>
-  !            <LI>time axis unit</LI>
-  !            <LI>time axis name</LI>
-  !            <LI>frequency for creating new file</LI>
-  !            <LI>unit for creating new file</LI>
-  !            <LI>start time of the new file</LI>
-  !            <LI>file duration</LI>
-  !            <LI>file duration unit.</LI>
-  !          </UL>
-  !          The 'file duration', if absent, will be equal to frequency for creating a new file.
-  !
-  !          Thus, the above means: create a new file every 10 days, each file will last 6 hours from creation time, no files will
-  !          be created before time "1 1 7 0 0 0".
-  !
-  !          In this example the string
-  !          <TT>10, "days", "1 1 7 0 0 0", 6, "hours"</TT> is optional.
-  !
-  !          Keywords for the time string suffix is
-  !          <TT>%xyr,%xmo,%xdy,%xhr,%xmi,%xsc</TT> where <TT>x</TT> is a
-  !          mandatory 1 digit number specifying the width of field used in
-  !          writing the string</LI>
-  !     <LI> New time axis for time averaged fields.  Users can use a namelist option to handle the time value written
-  !          to time axis for time averaged fields.
-  !
-  !          If <TT>mix_snapshot_average_fields=.true.</TT> then a time averaged file will have time values corresponding to
-  !          ending time_bound e.g. January monthly average is labeled Feb01. Users can have both snapshot and averaged fields in
-  !          one file.
-  !
-  !          If <TT>mix_snapshot_average_fields=.false.</TT> The time value written to time axis for time averaged fields is the
-  !          middle on the averaging time. For example, January monthly mean will be written at Jan 16 not Feb 01 as
-  !          before. However, to use this new feature users should <B>separate</B> snapshot fields and time averaged fields in
-  !          <B>different</B> files or a fatal error will occur.
-  !
-  !          The namelist <B>default</B> value is <TT>mix_snapshot_average_fields=.false.</TT></LI>
-  !     <LI> Time average, Root Mean Square, Max and Min, and diurnal. In addition to time average users can also get then Root Mean Square, Max or Min value
-  !          during the same interval of time as time average. For this purpose, in the diag table users must replace
-  !          <TT>.true.</TT> or <TT>.false.</TT> by "<TT>rms</TT>, <TT>max</TT>" or "<TT>min</TT>".  <B><I>Note:</I></B> Currently, max
-  !          and min are not available for regional output.
-  !
-  !          A diurnal average or the average of an integer power can also be requested using <TT>diurnal##</TT> or <TT>pow##</TT> where
-  !          <TT>##</TT> are the number of diurnal sections or integer power to average.</LI>
-  !     <LI> <TT>standard_name</TT> is added as optional argument in <LINK SRC="#register_diag_field"><TT>register_diag_field</TT>
-  !          </LINK>.</LI>
-  !     <LI>When namelist variable <TT>debug_diag_manager = .true.</TT> array
-  !         bounds are checked in <LINK SRC="#send_data"><TT>send_data</TT></LINK>.</LI>
-  !     <LI>Coordinate attributes can be written in the output file if the
-  !         argument "<TT>aux</TT>" is given in <LINK SRC="diag_axis.html#diag_axis_init"><TT>diag_axis_init</TT></LINK>. The
-  !         corresponding fields (geolat/geolon) should also be written to the
-  !         same file.</LI>
-  !   </OL>
-  !
-  ! </DESCRIPTION>
 
   ! <NAMELIST NAME="diag_manager_nml">
   !   <DATA NAME="append_pelist_name" TYPE="LOGICAL" DEFAULT=".FALSE.">
@@ -317,17 +195,12 @@ use platform_mod
   USE time_manager_mod, ONLY: set_time, set_date, get_time, time_type, OPERATOR(>=), OPERATOR(>),&
        & OPERATOR(<), OPERATOR(==), OPERATOR(/=), OPERATOR(/), OPERATOR(+), ASSIGNMENT(=), get_date, &
        & get_ticks_per_second
-  USE mpp_io_mod, ONLY: mpp_open, mpp_close, mpp_get_maxunits
   USE mpp_mod, ONLY: mpp_get_current_pelist, mpp_pe, mpp_npes, mpp_root_pe, mpp_sum
 
-#ifdef INTERNAL_FILE_NML
   USE mpp_mod, ONLY: input_nml_file
-#else
-  USE fms_mod, ONLY: open_namelist_file, close_file
-#endif
 
   USE fms_mod, ONLY: error_mesg, FATAL, WARNING, NOTE, stdout, stdlog, write_version_number,&
-       & file_exist, fms_error_handler, check_nml_error, get_mosaic_tile_file, lowercase
+       & fms_error_handler, check_nml_error, lowercase
   USE fms_io_mod, ONLY: get_instance_filename
   USE diag_axis_mod, ONLY: diag_axis_init, get_axis_length, get_axis_num, get_domain2d, get_tile_count,&
        & diag_axis_add_attribute, axis_compatible_check, CENTER, NORTH, EAST
@@ -387,110 +260,86 @@ use platform_mod
 
   type(time_type) :: Time_end
 
-  ! <INTERFACE NAME="send_data">
-  !   <TEMPLATE>
-  !     send_data(diag_field_id, field, time, is_in, js_in, ks_in,
-  !             mask, rmask, ie_in, je_in, ke_in, weight)
-  !   </TEMPLATE>
-  !   <OVERVIEW>
-  !     Send data over to output fields.
-  !   </OVERVIEW>
-  !   <DESCRIPTION>
-  !     <TT>send_data</TT> is overloaded for fields having zero dimension
-  !     (scalars) to 3 dimension.  <TT>diag_field_id</TT> corresponds to the id
-  !     returned from a previous call to <TT>register_diag_field</TT>. The field
-  !     array is restricted to the computational range of the array. Optional
-  !     argument <TT>is_in</TT> can be used to update sub-arrays of the entire
-  !     field. Additionally, an optional logical or real mask can be used to
-  !     apply missing values to the array.
-  !
-  !     If a field is declared to be <TT>mask_variant</TT> in
-  !     <TT>register_diag_field</TT> logical mask should be mandatory.
-  !
-  !     For the real  mask, the mask is applied if the mask value is less than
-  !     0.5.
-  !
-  !     By default, a field will be written out entirely in its global grid.
-  !     Users can also specify regions in which the field will be output. The
-  !     region is specified in diag-table just before the end of output_field
-  !     replacing "none".
-  !
-  !     For example, by default:
-  !
-  !     "ocean_mod","Vorticity","vorticity","file1","all",.false.,"none",2
-  !
-  !     for regional output:
-  !
-  !     "ocean_mod","Vorticity","vorticity_local","file2","all",.false.,"0.5 53.5 -89.5 -28.5 -1 -1",2
-  !
-  !     The format of a region is "<TT>xbegin xend ybegin yend zbegin zend</TT>".
-  !     If it is a 2D field use (-1 -1) for (zbegin zend) as in the example above.
-  !     For a 3D field use (-1 -1) for (zbegin zend) when you want to write the
-  !     entire vertical extent, otherwise specify real coordinates.  The units
-  !     used for region are the actual units used in grid_spec.nc (for example
-  !     degrees for lat, lon).  <B><I>NOTE:</I></B> A FATAL error will occur if
-  !     the region's boundaries are not found in grid_spec.nc.
-  !
-  !     Regional output on the cubed sphere grid is also supported.  To use regional
-  !     output on the cubed sphere grid, first the grid information needs to be sent to
-  !     <TT>diag_manager_mod</TT> using the <LINK
-  !     SRC="diag_grid.html#diag_grid_init"><TT> diag_grid_init</TT></LINK>
-  !     subroutine.
-  !
-  !     <B><I>NOTE:</I></B> When using regional output the files containing regional
-  !     outputs should be different from files containing global (default) output.
-  !     It is a FATAL error to have one file containing both regional and global
-  !     results. For maximum flexibility and independence from PE counts one file
-  !     should contain just one region.
-  !
-  !     Time averaging is supported in regional output.
-  !
-  !     Physical fields (written in "physics windows" of atmospheric code) are
-  !     fully supported for regional outputs.
-  !
-  !     <B><I>NOTE:</I></B> Most fields are defined in the data domain but use the
-  !     compute domain. In <TT>send_data</TT> the field can be passed in either
-  !     the data domain or in the compute domain.  If the data domain is used, the
-  !     start and end indicies of the compute domain (isc, iec, . . .) should be
-  !     passed.  If the compute domain is used no indices are needed.  The indices
-  !     are for determining halo exclusively.  If users want to output the field
-  !     partially they should use regional output as mentioned above.
-  !
-  !     Weight in Time averaging is now supported, each time level may have a
-  !     different weight. The default of weight is 1.
-  !   </DESCRIPTION>
-  !   <IN NAME="diag_field_id" TYPE="INTEGER"> </IN>
-  !   <IN NAME="field" TYPE="REAL, DIMENSION(:,:,:)"> </IN>
-  !   <IN NAME="time" TYPE="TYPE(time_type)"> </IN>
-  !   <IN NAME="is_in" TYPE="INTEGER, OPTIONAL"></IN>
-  !   <IN NAME="js_in" TYPE="INTEGER, OPTIONAL"></IN>
-  !   <IN NAME="ks_in" TYPE="INTEGER, OPTIONAL"></IN>
-  !   <IN NAME="mask" TYPE="LOGICAL, DIMENSION(:,:,:), OPTIONAL"></IN>
-  !   <IN NAME="rmask" TYPE="REAL, DIMENSION(:,:,:), OPTIONAL"></IN>
-  !   <IN NAME="ie_in" TYPE="INTEGER, OPTIONAL"></IN>
-  !   <IN NAME="je_in" TYPE="INTEGER, OPTIONAL"></IN>
-  !   <IN NAME="ke_in" TYPE="INTEGER, OPTIONAL"></IN>
-  !   <IN NAME="weight" TYPE="REAL, OPTIONAL"></IN>
-  !   <OUT NAME="err_msg" TYPE="CHARACTER(len=*), OPTIONAL"></OUT>
   !> @brief Send data over to output fields.
+  !!
+  !> <TT>send_data</TT> is overloaded for fields having zero dimension
+  !! (scalars) to 3 dimension.  <TT>diag_field_id</TT> corresponds to the id
+  !! returned from a previous call to <TT>register_diag_field</TT>. The field
+  !! array is restricted to the computational range of the array. Optional
+  !! argument <TT>is_in</TT> can be used to update sub-arrays of the entire
+  !! field. Additionally, an optional logical or real mask can be used to
+  !! apply missing values to the array.
+  !!
+  !! If a field is declared to be <TT>mask_variant</TT> in
+  !! <TT>register_diag_field</TT> logical mask should be mandatory.
+  !!
+  !! For the real  mask, the mask is applied if the mask value is less than
+  !! 0.5.
+  !!
+  !! By default, a field will be written out entirely in its global grid.
+  !! Users can also specify regions in which the field will be output. The
+  !! region is specified in diag-table just before the end of output_field
+  !! replacing "none".
+  !!
+  !! For example, by default:
+  !!
+  !! "ocean_mod","Vorticity","vorticity","file1","all",.false.,"none",2
+  !!
+  !! for regional output:
+  !!
+  !! "ocean_mod","Vorticity","vorticity_local","file2","all",.false.,"0.5 53.5 -89.5 -28.5 -1 -1",2
+  !!
+  !! The format of a region is "<TT>xbegin xend ybegin yend zbegin zend</TT>".
+  !! If it is a 2D field use (-1 -1) for (zbegin zend) as in the example above.
+  !! For a 3D field use (-1 -1) for (zbegin zend) when you want to write the
+  !! entire vertical extent, otherwise specify real coordinates.  The units
+  !! used for region are the actual units used in grid_spec.nc (for example
+  !! degrees for lat, lon).  <B><I>NOTE:</I></B> A FATAL error will occur if
+  !! the region's boundaries are not found in grid_spec.nc.
+  !!
+  !! Regional output on the cubed sphere grid is also supported.  To use regional
+  !! output on the cubed sphere grid, first the grid information needs to be sent to
+  !! <TT>diag_manager_mod</TT> using the @ref diag_grid#diag_grid_init subroutine.
+  !!
+  !! @note When using regional output the files containing regional
+  !! outputs should be different from files containing global (default) output.
+  !! It is a FATAL error to have one file containing both regional and global
+  !! results. For maximum flexibility and independence from PE counts one file
+  !! should contain just one region.
+  !!
+  !!
+  !! Time averaging is supported in regional output.
+  !!
+  !! Physical fields (written in "physics windows" of atmospheric code) are
+  !! fully supported for regional outputs.
+  !!
+  !! <B><I>NOTE:</I></B> Most fields are defined in the data domain but use the
+  !! compute domain. In <TT>send_data</TT> the field can be passed in either
+  !! the data domain or in the compute domain.  If the data domain is used, the
+  !! start and end indicies of the compute domain (isc, iec, . . .) should be
+  !! passed.  If the compute domain is used no indices are needed.  The indices
+  !! are for determining halo exclusively.  If users want to output the field
+  !! partially they should use regional output as mentioned above.
+  !!
+  !! Weight in Time averaging is now supported, each time level may have a
+  !! different weight. The default of weight is 1.
+  !> @ingroup diag_manager_mod
   INTERFACE send_data
      MODULE PROCEDURE send_data_0d
      MODULE PROCEDURE send_data_1d
      MODULE PROCEDURE send_data_2d
      MODULE PROCEDURE send_data_3d
-#ifdef OVERLOAD_R8
-     MODULE PROCEDURE send_data_2d_r8
-     MODULE PROCEDURE send_data_3d_r8
-#endif
   END INTERFACE
 
-  !> @brief Register Diagnostic Field.
+  !> @brief Register a diagnostic field for a given module
+  !> @ingroup diag_manager_mod
   INTERFACE register_diag_field
      MODULE PROCEDURE register_diag_field_scalar
      MODULE PROCEDURE register_diag_field_array
   END INTERFACE
 
   !> @brief Send tile-averaged data over to output fields.
+  !> @ingroup diag_manager_mod
   INTERFACE send_tile_averaged_data
      MODULE PROCEDURE send_tile_averaged_data1d
      MODULE PROCEDURE send_tile_averaged_data2d
@@ -498,6 +347,7 @@ use platform_mod
   END INTERFACE
 
   !> @brief Add a attribute to the output field
+  !> @ingroup diag_manager_mod
   INTERFACE diag_field_add_attribute
      MODULE PROCEDURE diag_field_add_attribute_scalar_r
      MODULE PROCEDURE diag_field_add_attribute_scalar_i
@@ -505,41 +355,35 @@ use platform_mod
      MODULE PROCEDURE diag_field_add_attribute_r1d
      MODULE PROCEDURE diag_field_add_attribute_i1d
   END INTERFACE diag_field_add_attribute
-  ! </INTERFACE>
 
+!> @addtogroup diag_manager_mod
+!> @{
 CONTAINS
 
-  ! <FUNCTION NAME="register_diag_field_scalar" INTERFACE="register_diag_field">
-  !   <IN NAME="module_name" TYPE="CHARACTER(len=*)" />
-  !   <IN NAME="field_name" TYPE="CHARACTER(len=*)" />
-  !   <IN NAME="axes" TYPE="Not Applicable" />
-  !   <IN NAME="init_time" TYPE="TYPE(time_type), OPTIONAL" />
-  !   <IN NAME="long_name" TYPE="CHARACTER(len=*), OPTIONAL" />
-  !   <IN NAME="units" TYPE="CHARACTER(len=*), OPTIONAL" />
-  !   <IN NAME="missing_value" TYPE="REAL, OPTIONAL" />
-  !   <IN NAME="range" TYPE="REAL, DIMENSION(2), OPTIONAL" />
-  !   <IN NAME="mask_variant" TYPE="Not Applicable" />
-  !   <IN NAME="standard_name" TYPE="CHARACTER(len=*), OPTIONAL" />
-  !   <IN NAME="do_not_log" TYPE="LOGICAL, OPTIONAL" />
-  !   <IN NAME="area" TYPE="INTEGER, OPTIONAL" />
-  !   <IN NAME="volume" TYPE="INTEGER, OPTIONAL" />
-  !   <IN NAME="realm" TYPE="CHARACTER(len=*), OPTIONAL" />
-  !   <OUT NAME="err_msg" TYPE="CHARACTER(len=*), OPTIONAL" />
-  !> @return integer
+  !> @brief Registers a scalar field
+  !! @return field index for subsequent call to send_data.
   INTEGER FUNCTION register_diag_field_scalar(module_name, field_name, init_time, &
        & long_name, units, missing_value, range, standard_name, do_not_log, err_msg,&
        & area, volume, realm)
     CHARACTER(len=*), INTENT(in) :: module_name, field_name
     TYPE(time_type), OPTIONAL, INTENT(in) :: init_time
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: long_name, units, standard_name
-    REAL, OPTIONAL, INTENT(in) :: missing_value
-    REAL,  DIMENSION(2), OPTIONAL, INTENT(in) :: RANGE
+    CLASS(*), OPTIONAL, INTENT(in) :: missing_value
+    CLASS(*), DIMENSION(:), OPTIONAL, INTENT(in) :: range
     LOGICAL, OPTIONAL, INTENT(in) :: do_not_log !< if TRUE, field information is not logged
     CHARACTER(len=*), OPTIONAL, INTENT(out):: err_msg
     INTEGER, OPTIONAL, INTENT(in) :: area, volume
     CHARACTER(len=*), OPTIONAL, INTENT(in):: realm !< String to set as the value to the modeling_realm attribute
 
     IF ( PRESENT(err_msg) ) err_msg = ''
+
+    ! Fatal error if range is present and its extent is not 2.
+    IF ( PRESENT(range) ) THEN
+       IF ( SIZE(range) .NE. 2 ) THEN
+          ! <ERROR STATUS="FATAL">extent of range should be 2</ERROR>
+          CALL error_mesg ('diag_manager_mod::register_diag_field', 'extent of range should be 2', FATAL)
+       END IF
+    END IF
 
     IF ( PRESENT(init_time) ) THEN
        register_diag_field_scalar = register_diag_field_array(module_name, field_name,&
@@ -552,30 +396,9 @@ CONTAINS
             & standard_name=standard_name, do_not_log=do_not_log, realm=realm)
     END IF
   END FUNCTION register_diag_field_scalar
-  ! </FUNCTION>
 
-  ! <FUNCTION NAME="register_diag_field_array" INTERFACE="register_diag_field">
-  !   <IN NAME="module_name" TYPE="CHARACTER(len=*)" />
-  !   <IN NAME="field_name" TYPE="CHARACTER(len=*)" />
-  !   <IN NAME="axes" TYPE="INTEGER, DIMENSION(:)" />
-  !   <IN NAME="init_time" TYPE="TYPE(time_type)" />
-  !   <IN NAME="long_name" TYPE="CHARACTER(len=*), OPTIONAL" />
-  !   <IN NAME="units" TYPE="CHARACTER(len=*), OPTIONAL" />
-  !   <IN NAME="missing_value" TYPE="REAL, OPTIONAL" />
-  !   <IN NAME="range" TYPE="REAL, DIMENSION(2), OPTIONAL" />
-  !   <IN NAME="mask_variant" TYPE="LOGICAL, OPTIONAL" />
-  !   <IN NAME="standard_name" TYPE="CHARACTER(len=*), OPTIONAL" />
-  !   <IN NAME="do_not_log" TYPE="LOGICAL, OPTIONAL" />
-  !   <IN NAME="interp_method" TYPE="CHARACTER(len=*), OPTIONAL">
-  !     The interp method to be used when regridding the field in post-processing.
-  !     Valid options are "conserve_order1", "conserve_order2", and "none".
-  !   </IN>
-  !   <IN NAME="tile_count" TYPE="INTEGER, OPTIONAL" />
-  !   <IN NAME="area" TYPE="INTEGER, OPTIONAL">diag_field_id containing the cell area field</IN>
-  !   <IN NAME="volume" TYPE="INTEGER, OPTIONAL">diag_field_id containing the cell volume field</IN>
-  !   <IN NAME="realm" TYPE="CHARACTER(len=*), OPTIONAL" />
-  !   <OUT NAME="err_msg" TYPE="CHARACTER(len=*), OPTIONAL" />
-  !> @return integer
+  !> @brief Registers an array field
+  !> @return field index for subsequent call to send_data.
   INTEGER FUNCTION register_diag_field_array(module_name, field_name, axes, init_time, &
        & long_name, units, missing_value, range, mask_variant, standard_name, verbose,&
        & do_not_log, err_msg, interp_method, tile_count, area, volume, realm)
@@ -583,7 +406,8 @@ CONTAINS
     INTEGER, INTENT(in) :: axes(:)
     TYPE(time_type), INTENT(in) :: init_time
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: long_name, units, standard_name
-    REAL, OPTIONAL, INTENT(in) :: missing_value, RANGE(2)
+    CLASS(*), OPTIONAL, INTENT(in) :: missing_value
+    CLASS(*), DIMENSION(:), OPTIONAL, INTENT(in) :: range
     LOGICAL, OPTIONAL, INTENT(in) :: mask_variant,verbose
     LOGICAL, OPTIONAL, INTENT(in) :: do_not_log !< if TRUE, field info is not logged
     CHARACTER(len=*), OPTIONAL, INTENT(out):: err_msg
@@ -620,6 +444,14 @@ CONTAINS
     END IF
 
     IF ( PRESENT(err_msg) ) err_msg = ''
+
+    ! Fatal error if range is present and its extent is not 2.
+    IF ( PRESENT(range) ) THEN
+       IF ( SIZE(range) .NE. 2 ) THEN
+          ! <ERROR STATUS="FATAL">extent of range should be 2</ERROR>
+          CALL error_mesg ('diag_manager_mod::register_diag_field', 'extent of range should be 2', FATAL)
+       END IF
+    END IF
 
     ! Call register static, then set static back to false
     register_diag_field_array = register_static_field(module_name, field_name, axes,&
@@ -763,15 +595,15 @@ CONTAINS
   END FUNCTION register_diag_field_array
 
   !> @brief Return field index for subsequent call to send_data.
-  !! @return Return (integer) field index for subsequent call to send_data.
+  !! @return field index for subsequent call to send_data.
   INTEGER FUNCTION register_static_field(module_name, field_name, axes, long_name, units,&
        & missing_value, range, mask_variant, standard_name, DYNAMIC, do_not_log, interp_method,&
        & tile_count, area, volume, realm)
     CHARACTER(len=*), INTENT(in) :: module_name, field_name
     INTEGER, DIMENSION(:), INTENT(in) :: axes
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: long_name, units, standard_name
-    REAL, OPTIONAL, INTENT(in) :: missing_value
-    REAL, DIMENSION(2), OPTIONAL, INTENT(in) :: range
+    CLASS(*), OPTIONAL, INTENT(in) :: missing_value
+    CLASS(*), DIMENSION(:), OPTIONAL, INTENT(in) :: range
     LOGICAL, OPTIONAL, INTENT(in) :: mask_variant
     LOGICAL, OPTIONAL, INTENT(in) :: DYNAMIC
     LOGICAL, OPTIONAL, INTENT(in) :: do_not_log !< if TRUE, field information is not logged
@@ -784,7 +616,8 @@ CONTAINS
     INTEGER,          OPTIONAL, INTENT(in) :: volume !< Field ID for the volume field associated with this field
     CHARACTER(len=*), OPTIONAL, INTENT(in) :: realm !< String to set as the value to the modeling_realm attribute
 
-    REAL :: missing_value_use
+    REAL :: missing_value_use !< Local copy of missing_value
+    REAL, DIMENSION(2) :: range_use !< Local copy of range
     INTEGER :: field, num_axes, j, out_num, k
     INTEGER, DIMENSION(3) :: siz, local_siz, local_start, local_end ! indices of local domain of global axes
     INTEGER :: tile, file_num
@@ -803,7 +636,15 @@ CONTAINS
        IF ( use_cmor ) THEN
           missing_value_use = CMOR_MISSING_VALUE
        ELSE
-          missing_value_use = missing_value
+          SELECT TYPE (missing_value)
+          TYPE IS (real(kind=r4_kind))
+             missing_value_use = missing_value
+          TYPE IS (real(kind=r8_kind))
+             missing_value_use = real(missing_value)
+          CLASS DEFAULT
+             CALL error_mesg ('diag_manager_mod::register_static_field',&
+                  & 'The missing_value is not one of the supported types of real(kind=4) or real(kind=8)', FATAL)
+          END SELECT
        END IF
     END IF
 
@@ -829,6 +670,14 @@ CONTAINS
        allow_log = .NOT.do_not_log
     ELSE
        allow_log = .TRUE.
+    END IF
+
+    ! Fatal error if range is present and its extent is not 2.
+    IF ( PRESENT(range) ) THEN
+       IF ( SIZE(range) .NE. 2 ) THEN
+          ! <ERROR STATUS="FATAL">extent of range should be 2</ERROR>
+          CALL error_mesg ('diag_manager_mod::register_static_field', 'extent of range should be 2', FATAL)
+       END IF
     END IF
 
     ! Namelist do_diag_field_log is by default false.  Thus to log the
@@ -950,9 +799,18 @@ CONTAINS
     END IF
 
     IF ( PRESENT(range) ) THEN
-       input_fields(field)%range = range
+       SELECT TYPE (range)
+       TYPE IS (real(kind=r4_kind))
+          range_use = range
+       TYPE IS (real(kind=r8_kind))
+          range_use = real(range)
+       CLASS DEFAULT
+          CALL error_mesg ('diag_manager_mod::register_static_field',&
+               & 'The range is not one of the supported types of real(kind=4) or real(kind=8)', FATAL)
+       END SELECT
+       input_fields(field)%range = range_use
        ! don't use the range if it is not a valid range
-       input_fields(field)%range_present = range(2) .gt. range(1)
+       input_fields(field)%range_present = range_use(2) .gt. range_use(1)
     ELSE
        input_fields(field)%range = (/ 1., 0. /)
        input_fields(field)%range_present = .FALSE.
@@ -1362,11 +1220,10 @@ CONTAINS
        END IF
     END IF
   END SUBROUTINE init_field_cell_measures
-  ! </SUBROUTINE>
 
-  !> \brief Add to the associated files attribute
+  !> @brief Add to the associated files attribute
   !!
-  !! \throw FATAL, "Length of asso_file_name is not long enough to hold the associated file name."
+  !! @throw FATAL, "Length of asso_file_name is not long enough to hold the associated file name."
   !!     The length of character array asso_file_name is not long enough to hold the full file name
   !!     of the associated_file.  Please contact the developer to increase the length of the  variable.
   SUBROUTINE add_associated_files(file_num, cm_file_num, cm_ind)
@@ -1416,67 +1273,48 @@ CONTAINS
          & TRIM(date_prefix)//TRIM(asso_file_name))
   END SUBROUTINE add_associated_files
 
-  ! <FUNCTION NAME="send_data_0d" INTERFACE="send_data">
-  !   <IN NAME="diag_field_id" TYPE="INTEGER"> </IN>
-  !   <IN NAME="field" TYPE="REAL"> </IN>
-  !   <IN NAME="time" TYPE="TYPE(time_type), OPTIONAL"> </IN>
-  !   <IN NAME="is_in" TYPE="Not Applicable"></IN>
-  !   <IN NAME="js_in" TYPE="Not Applicable"></IN>
-  !   <IN NAME="ks_in" TYPE="Not Applicable"></IN>
-  !   <IN NAME="mask" TYPE="Not Applicable"></IN>
-  !   <IN NAME="rmask" TYPE="Not Applicable"></IN>
-  !   <IN NAME="ie_in" TYPE="Not Applicable"></IN>
-  !   <IN NAME="je_in" TYPE="Not Applicable"></IN>
-  !   <IN NAME="ke_in" TYPE="Not Applicable"></IN>
-  !   <IN NAME="weight" TYPE="Not Applicable"></IN>
-  !   <OUT NAME="err_msg" TYPE="CHARACTER(len=*), OPTIONAL"></OUT>
-  !> @return Logical send_data_0d
+  !> @return true if send is successful
   LOGICAL FUNCTION send_data_0d(diag_field_id, field, time, err_msg)
     INTEGER, INTENT(in) :: diag_field_id
-    REAL, INTENT(in) :: field
+    CLASS(*), INTENT(in) :: field
     TYPE(time_type), INTENT(in), OPTIONAL :: time
     CHARACTER(len=*), INTENT(out), OPTIONAL :: err_msg
 
-    REAL :: field_out(1, 1, 1)
+    REAL :: field_out(1, 1, 1) !< Local copy of field
 
     ! If diag_field_id is < 0 it means that this field is not registered, simply return
     IF ( diag_field_id <= 0 ) THEN
        send_data_0d = .FALSE.
        RETURN
     END IF
+
     ! First copy the data to a three d array with last element 1
-    field_out(1, 1, 1) = field
+    SELECT TYPE (field)
+    TYPE IS (real(kind=r4_kind))
+       field_out(1, 1, 1) = field
+    TYPE IS (real(kind=r8_kind))
+       field_out(1, 1, 1) = real(field)
+    CLASS DEFAULT
+       CALL error_mesg ('diag_manager_mod::send_data_0d',&
+            & 'The field is not one of the supported types of real(kind=4) or real(kind=8)', FATAL)
+    END SELECT
+
     send_data_0d = send_data_3d(diag_field_id, field_out, time, err_msg=err_msg)
   END FUNCTION send_data_0d
-  ! </FUNCTION>
 
-  ! <FUNCTION NAME="send_data_1d" INTERFACE="send_data">
-  !   <IN NAME="diag_field_id" TYPE="INTEGER"> </IN>
-  !   <IN NAME="field" TYPE="REAL, DIMENSION(:)"> </IN>
-  !   <IN NAME="time" TYPE="TYPE(time_type)"> </IN>
-  !   <IN NAME="is_in" TYPE="INTEGER, OPTIONAL"></IN>
-  !   <IN NAME="js_in" TYPE="Not Applicable"></IN>
-  !   <IN NAME="ks_in" TYPE="Not Applicable"></IN>
-  !   <IN NAME="mask" TYPE="LOGICAL, DIMENSION(:), OPTIONAL"></IN>
-  !   <IN NAME="rmask" TYPE="REAL, DIMENSION(:), OPTIONAL"></IN>
-  !   <IN NAME="ie_in" TYPE="INTEGER, OPTIONAL"></IN>
-  !   <IN NAME="je_in" TYPE="Not Applicable"></IN>
-  !   <IN NAME="ke_in" TYPE="Not Applicable"></IN>
-  !   <IN NAME="weight" TYPE="REAL, OPTIONAL"></IN>
-  !   <OUT NAME="err_msg" TYPE="CHARACTER(len=*), OPTIONAL"></OUT>
-  !> @return Logical send_data_1d
+  !> @return true if send is successful
   LOGICAL FUNCTION send_data_1d(diag_field_id, field, time, is_in, mask, rmask, ie_in, weight, err_msg)
     INTEGER, INTENT(in) :: diag_field_id
-    REAL, DIMENSION(:), INTENT(in) :: field
-    REAL, INTENT(in), OPTIONAL :: weight
-    REAL, INTENT(in), DIMENSION(:), OPTIONAL :: rmask
+    CLASS(*), DIMENSION(:), INTENT(in) :: field
+    CLASS(*), INTENT(in), OPTIONAL :: weight
+    CLASS(*), INTENT(in), DIMENSION(:), OPTIONAL :: rmask
     TYPE (time_type), INTENT(in), OPTIONAL :: time
     INTEGER, INTENT(in), OPTIONAL :: is_in, ie_in
     LOGICAL, INTENT(in), DIMENSION(:), OPTIONAL :: mask
     CHARACTER(len=*), INTENT(out), OPTIONAL :: err_msg
 
-    REAL, DIMENSION(SIZE(field(:)), 1, 1) :: field_out
-    LOGICAL, DIMENSION(SIZE(field(:)), 1, 1) ::  mask_out
+    REAL, DIMENSION(SIZE(field(:)), 1, 1) :: field_out !< Local copy of field
+    LOGICAL, DIMENSION(SIZE(field(:)), 1, 1) ::  mask_out !< Local copy of mask
 
     ! If diag_field_id is < 0 it means that this field is not registered, simply return
     IF ( diag_field_id <= 0 ) THEN
@@ -1485,7 +1323,15 @@ CONTAINS
     END IF
 
     ! First copy the data to a three d array with last element 1
-    field_out(:, 1, 1) = field
+    SELECT TYPE (field)
+    TYPE IS (real(kind=r4_kind))
+       field_out(:, 1, 1) = field
+    TYPE IS (real(kind=r8_kind))
+       field_out(:, 1, 1) = real(field)
+    CLASS DEFAULT
+       CALL error_mesg ('diag_manager_mod::send_data_1d',&
+            & 'The field is not one of the supported types of real(kind=4) or real(kind=8)', FATAL)
+    END SELECT
 
     ! Default values for mask
     IF ( PRESENT(mask) ) THEN
@@ -1494,7 +1340,18 @@ CONTAINS
        mask_out = .TRUE.
     END IF
 
-    IF ( PRESENT(rmask) ) WHERE (rmask < 0.5) mask_out(:, 1, 1) = .FALSE.
+    IF ( PRESENT(rmask) ) THEN
+       SELECT TYPE (rmask)
+       TYPE IS (real(kind=r4_kind))
+          WHERE (rmask < 0.5_r4_kind) mask_out(:, 1, 1) = .FALSE.
+       TYPE IS (real(kind=r8_kind))
+          WHERE (rmask < 0.5_r8_kind) mask_out(:, 1, 1) = .FALSE.
+       CLASS DEFAULT
+          CALL error_mesg ('diag_manager_mod::send_data_1d',&
+               & 'The rmask is not one of the supported types of real(kind=4) or real(kind=8)', FATAL)
+       END SELECT
+    END IF
+
     IF ( PRESENT(mask) .OR. PRESENT(rmask) ) THEN
        IF ( PRESENT(is_in) .OR. PRESENT(ie_in) ) THEN
           send_data_1d = send_data_3d(diag_field_id, field_out, time, is_in=is_in, js_in=1, ks_in=1,&
@@ -1512,36 +1369,21 @@ CONTAINS
        END IF
     END IF
   END FUNCTION send_data_1d
-  ! </FUNCTION>
 
-  ! <FUNCTION NAME="send_data_2d" INTERFACE="send_data">
-  !   <IN NAME="diag_field_id" TYPE="INTEGER"> </IN>
-  !   <IN NAME="field" TYPE="REAL, DIMENSION(:,:)"> </IN>
-  !   <IN NAME="time" TYPE="TYPE(time_type)"> </IN>
-  !   <IN NAME="is_in" TYPE="INTEGER, OPTIONAL"></IN>
-  !   <IN NAME="js_in" TYPE="INTEGER, OPTIONAL"></IN>
-  !   <IN NAME="ks_in" TYPE="Not Applicable"></IN>
-  !   <IN NAME="mask" TYPE="LOGICAL, DIMENSION(:,:), OPTIONAL"></IN>
-  !   <IN NAME="rmask" TYPE="REAL, DIMENSION(:,:), OPTIONAL"></IN>
-  !   <IN NAME="ie_in" TYPE="INTEGER, OPTIONAL"></IN>
-  !   <IN NAME="je_in" TYPE="INTEGER, OPTIONAL"></IN>
-  !   <IN NAME="ke_in" TYPE="Not Applicable"></IN>
-  !   <IN NAME="weight" TYPE="REAL, OPTIONAL"></IN>
-  !   <OUT NAME="err_msg" TYPE="CHARACTER(len=*), OPTIONAL"></OUT>
-  !> @return Logical send_data_2d
+  !> @return true if send is successful
   LOGICAL FUNCTION send_data_2d(diag_field_id, field, time, is_in, js_in, &
        & mask, rmask, ie_in, je_in, weight, err_msg)
     INTEGER, INTENT(in) :: diag_field_id
-    REAL, INTENT(in), DIMENSION(:,:) :: field
-    REAL, INTENT(in), OPTIONAL :: weight
+    CLASS(*), INTENT(in), DIMENSION(:,:) :: field
+    CLASS(*), INTENT(in), OPTIONAL :: weight
     TYPE (time_type), INTENT(in), OPTIONAL :: time
     INTEGER, INTENT(in), OPTIONAL :: is_in, js_in, ie_in, je_in
     LOGICAL, INTENT(in), DIMENSION(:,:), OPTIONAL :: mask
-    REAL, INTENT(in), DIMENSION(:,:),OPTIONAL :: rmask
+    CLASS(*), INTENT(in), DIMENSION(:,:),OPTIONAL :: rmask
     CHARACTER(len=*), INTENT(out), OPTIONAL :: err_msg
 
-    REAL, DIMENSION(SIZE(field,1),SIZE(field,2),1) :: field_out
-    LOGICAL, DIMENSION(SIZE(field,1),SIZE(field,2),1) ::  mask_out
+    REAL, DIMENSION(SIZE(field,1),SIZE(field,2),1) :: field_out !< Local copy of field
+    LOGICAL, DIMENSION(SIZE(field,1),SIZE(field,2),1) ::  mask_out !< Local copy of mask
 
     ! If diag_field_id is < 0 it means that this field is not registered, simply return
     IF ( diag_field_id <= 0 ) THEN
@@ -1550,7 +1392,15 @@ CONTAINS
     END IF
 
     ! First copy the data to a three d array with last element 1
-    field_out(:, :, 1) = field
+    SELECT TYPE (field)
+    TYPE IS (real(kind=r4_kind))
+       field_out(:, :, 1) = field
+    TYPE IS (real(kind=r8_kind))
+       field_out(:, :, 1) = real(field)
+    CLASS DEFAULT
+       CALL error_mesg ('diag_manager_mod::send_data_2d',&
+            & 'The field is not one of the supported types of real(kind=4) or real(kind=8)', FATAL)
+    END SELECT
 
     ! Default values for mask
     IF ( PRESENT(mask) ) THEN
@@ -1559,7 +1409,18 @@ CONTAINS
        mask_out = .TRUE.
     END IF
 
-    IF ( PRESENT(rmask) ) WHERE ( rmask < 0.5 ) mask_out(:, :, 1) = .FALSE.
+    IF ( PRESENT(rmask) ) THEN
+       SELECT TYPE (rmask)
+       TYPE IS (real(kind=r4_kind))
+          WHERE ( rmask < 0.5_r4_kind ) mask_out(:, :, 1) = .FALSE.
+       TYPE IS (real(kind=r8_kind))
+          WHERE ( rmask < 0.5_r8_kind ) mask_out(:, :, 1) = .FALSE.
+       CLASS DEFAULT
+          CALL error_mesg ('diag_manager_mod::send_data_2d',&
+               & 'The rmask is not one of the supported types of real(kind=4) or real(kind=8)', FATAL)
+       END SELECT
+    END IF
+
     IF ( PRESENT(mask) .OR. PRESENT(rmask) ) THEN
        send_data_2d = send_data_3d(diag_field_id, field_out, time, is_in=is_in, js_in=js_in, ks_in=1, mask=mask_out,&
             & ie_in=ie_in, je_in=je_in, ke_in=1, weight=weight, err_msg=err_msg)
@@ -1568,118 +1429,17 @@ CONTAINS
             & ie_in=ie_in, je_in=je_in, ke_in=1, weight=weight, err_msg=err_msg)
     END IF
   END FUNCTION send_data_2d
-  ! </FUNCTION>
 
-#ifdef OVERLOAD_R8
-  ! <FUNCTION NAME="send_data_2d_r8" INTERFACE="send_data">
-  LOGICAL FUNCTION send_data_2d_r8(diag_field_id, field, time, is_in, js_in, &
-       & mask, rmask, ie_in, je_in, weight, err_msg)
-    INTEGER, INTENT(in) :: diag_field_id
-    REAL(kind=8), INTENT(in), DIMENSION(:,:) :: field
-    REAL, INTENT(in), OPTIONAL :: weight
-    TYPE (time_type), INTENT(in), OPTIONAL :: time
-    INTEGER, INTENT(in), OPTIONAL :: is_in, js_in, ie_in, je_in
-    LOGICAL, INTENT(in), DIMENSION(:,:), OPTIONAL :: mask
-    REAL, INTENT(in), DIMENSION(:,:),OPTIONAL :: rmask
-    CHARACTER(len=*), INTENT(out), OPTIONAL :: err_msg
-
-    REAL, DIMENSION(SIZE(field,1),SIZE(field,2),1) :: field_out
-    LOGICAL, DIMENSION(SIZE(field,1),SIZE(field,2),1) ::  mask_out
-
-    ! If diag_field_id is < 0 it means that this field is not registered, simply return
-    IF ( diag_field_id <= 0 ) THEN
-       send_data_2d_r8 = .FALSE.
-       RETURN
-    END IF
-
-    ! First copy the data to a three d array with last element 1
-    field_out(:, :, 1) = field
-
-    ! Default values for mask
-    IF ( PRESENT(mask) ) THEN
-       mask_out(:, :, 1) = mask
-    ELSE
-       mask_out = .TRUE.
-    END IF
-
-    IF ( PRESENT(rmask) ) WHERE ( rmask < 0.5 ) mask_out(:, :, 1) = .FALSE.
-    IF ( PRESENT(mask) .OR. PRESENT(rmask) ) THEN
-       send_data_2d_r8 = send_data_3d(diag_field_id, field_out, time, is_in=is_in, js_in=js_in, ks_in=1, mask=mask_out,&
-            & ie_in=ie_in, je_in=je_in, ke_in=1, weight=weight, err_msg=err_msg)
-    ELSE
-       send_data_2d_r8 = send_data_3d(diag_field_id, field_out, time, is_in=is_in, js_in=js_in, ks_in=1,&
-            & ie_in=ie_in, je_in=je_in, ke_in=1, weight=weight, err_msg=err_msg)
-    END IF
-  END FUNCTION send_data_2d_r8
-  ! </FUNCTION>
-
-  ! <FUNCTION NAME="send_data_3d_r8" INTERFACE="send_data">
-  LOGICAL FUNCTION send_data_3d_r8(diag_field_id, field, time, is_in, js_in, ks_in, &
-             & mask, rmask, ie_in, je_in, ke_in, weight, err_msg)
-    INTEGER, INTENT(in) :: diag_field_id
-    REAL(kind=8), INTENT(in), DIMENSION(:,:,:) :: field
-    REAL, INTENT(in), OPTIONAL :: weight
-    TYPE (time_type), INTENT(in), OPTIONAL :: time
-    INTEGER, INTENT(in), OPTIONAL :: is_in, js_in, ks_in,ie_in,je_in, ke_in
-    LOGICAL, INTENT(in), DIMENSION(:,:,:), OPTIONAL :: mask
-    REAL, INTENT(in), DIMENSION(:,:,:),OPTIONAL :: rmask
-    CHARACTER(len=*), INTENT(out), OPTIONAL :: err_msg
-
-    REAL, DIMENSION(SIZE(field,1),SIZE(field,2),size(field,3)) :: field_out
-    LOGICAL, DIMENSION(SIZE(field,1),SIZE(field,2),size(field,3)) ::  mask_out
-
-    ! If diag_field_id is < 0 it means that this field is not registered, simply return
-    IF ( diag_field_id <= 0 ) THEN
-       send_data_3d_r8 = .FALSE.
-       RETURN
-    END IF
-
-    ! First copy the data to a three d array with last element 1
-    field_out = field
-
-    ! Default values for mask
-    IF ( PRESENT(mask) ) THEN
-       mask_out = mask
-    ELSE
-       mask_out = .TRUE.
-    END IF
-
-    IF ( PRESENT(rmask) ) WHERE ( rmask < 0.5 ) mask_out = .FALSE.
-    IF ( PRESENT(mask) .OR. PRESENT(rmask) ) THEN
-       send_data_3d_r8 = send_data_3d(diag_field_id, field_out, time, is_in=is_in, js_in=js_in, ks_in=ks_in, mask=mask_out,&
-            & ie_in=ie_in, je_in=je_in, ke_in=ke_in, weight=weight, err_msg=err_msg)
-    ELSE
-       send_data_3d_r8 = send_data_3d(diag_field_id, field_out, time, is_in=is_in, js_in=js_in, ks_in=ks_in,&
-            & ie_in=ie_in, je_in=je_in, ke_in=ke_in, weight=weight, err_msg=err_msg)
-    END IF
-  END FUNCTION send_data_3d_r8
-  ! </FUNCTION>
-#endif
-
-  ! <FUNCTION NAME="send_data_3d" INTERFACE="send_data">
-  !   <IN NAME="diag_field_id" TYPE="INTEGER"> </IN>
-  !   <IN NAME="field" TYPE="REAL, DIMENSION(:,:,:)"> </IN>
-  !   <IN NAME="time" TYPE="TYPE(time_type)"> </IN>
-  !   <IN NAME="is_in" TYPE="INTEGER, OPTIONAL"></IN>
-  !   <IN NAME="js_in" TYPE="INTEGER, OPTIONAL"></IN>
-  !   <IN NAME="ks_in" TYPE="INTEGER, OPTIONAL"></IN>
-  !   <IN NAME="mask" TYPE="LOGICAL, DIMENSION(:,:,:), OPTIONAL"></IN>
-  !   <IN NAME="rmask" TYPE="REAL, DIMENSION(:,:,:), OPTIONAL"></IN>
-  !   <IN NAME="ie_in" TYPE="INTEGER, OPTIONAL"></IN>
-  !   <IN NAME="je_in" TYPE="INTEGER, OPTIONAL"></IN>
-  !   <IN NAME="ke_in" TYPE="INTEGER, OPTIONAL"></IN>
-  !   <IN NAME="weight" TYPE="REAL, OPTIONAL"></IN>
-  !   <OUT NAME="err_msg" TYPE="CHARACTER(len=*), OPTIONAL"></OUT>
-  !> @return Logical send_data_3d
+  !> @return true if send is successful
   LOGICAL FUNCTION send_data_3d(diag_field_id, field, time, is_in, js_in, ks_in, &
              & mask, rmask, ie_in, je_in, ke_in, weight, err_msg)
     INTEGER, INTENT(in) :: diag_field_id
-    REAL, DIMENSION(:,:,:), INTENT(in) :: field
-    REAL, INTENT(in), OPTIONAL :: weight
+    CLASS(*), DIMENSION(:,:,:), INTENT(in) :: field
+    CLASS(*), INTENT(in), OPTIONAL :: weight
     TYPE (time_type), INTENT(in), OPTIONAL :: time
     INTEGER, INTENT(in), OPTIONAL :: is_in, js_in, ks_in,ie_in,je_in, ke_in
     LOGICAL, DIMENSION(:,:,:), INTENT(in), OPTIONAL :: mask
-    REAL, DIMENSION(:,:,:), INTENT(in), OPTIONAL :: rmask
+    CLASS(*), DIMENSION(:,:,:), INTENT(in), OPTIONAL :: rmask
     CHARACTER(len=*), INTENT(out), OPTIONAL :: err_msg
 
     REAL :: weight1
@@ -1713,6 +1473,8 @@ CONTAINS
     CHARACTER(len=256) :: err_msg_local
     CHARACTER(len=128) :: error_string, error_string1
 
+    REAL, ALLOCATABLE, DIMENSION(:,:,:) :: field_out !< Local copy of field
+
     ! If diag_field_id is < 0 it means that this field is not registered, simply return
     IF ( diag_field_id <= 0 ) THEN
        send_data_3d = .FALSE.
@@ -1735,6 +1497,23 @@ CONTAINS
 !!$       first_send_data_call = .FALSE.
 !!$    END IF
 
+    ! First copy the data to a three d array
+    ALLOCATE(field_out(SIZE(field,1),SIZE(field,2),SIZE(field,3)), STAT=status)
+    IF ( status .NE. 0 ) THEN
+       WRITE (err_msg_local, FMT='("Unable to allocate field_out(",I5,",",I5,",",I5,"). (STAT: ",I5,")")')&
+            & SIZE(field,1), SIZE(field,2), SIZE(field,3), status
+       IF ( fms_error_handler('diag_manager_mod::send_data_3d', err_msg_local, err_msg) ) RETURN
+    END IF
+    SELECT TYPE (field)
+    TYPE IS (real(kind=r4_kind))
+       field_out = field
+    TYPE IS (real(kind=r8_kind))
+       field_out = real(field)
+    CLASS DEFAULT
+       CALL error_mesg ('diag_manager_mod::send_data_3d',&
+            & 'The field is not one of the supported types of real(kind=4) or real(kind=8)', FATAL)
+    END SELECT
+
     ! oor_mask is only used for checking out of range values.
     ALLOCATE(oor_mask(SIZE(field,1),SIZE(field,2),SIZE(field,3)), STAT=status)
     IF ( status .NE. 0 ) THEN
@@ -1748,7 +1527,18 @@ CONTAINS
     ELSE
        oor_mask = .TRUE.
     END IF
-    IF ( PRESENT(rmask) ) WHERE ( rmask < 0.5 ) oor_mask = .FALSE.
+
+    IF ( PRESENT(rmask) ) THEN
+       SELECT TYPE (rmask)
+       TYPE IS (real(kind=r4_kind))
+          WHERE ( rmask < 0.5_r4_kind ) oor_mask = .FALSE.
+       TYPE IS (real(kind=r8_kind))
+          WHERE ( rmask < 0.5_r8_kind ) oor_mask = .FALSE.
+       CLASS DEFAULT
+          CALL error_mesg ('diag_manager_mod::send_data_3d',&
+               & 'The rmask is not one of the supported types of real(kind=4) or real(kind=8)', FATAL)
+       END SELECT
+    END IF
 
     ! send_data works in either one or another of two modes.
     ! 1. Input field is a window (e.g. FMS physics)
@@ -1764,6 +1554,7 @@ CONTAINS
     IF ( PRESENT(ie_in) ) THEN
        IF ( .NOT.PRESENT(is_in) ) THEN
           IF ( fms_error_handler('diag_manager_mod::send_data_3d', 'ie_in present without is_in', err_msg) ) THEN
+             DEALLOCATE(field_out)
              DEALLOCATE(oor_mask)
              RETURN
           END IF
@@ -1771,6 +1562,7 @@ CONTAINS
        IF ( PRESENT(js_in) .AND. .NOT.PRESENT(je_in) ) THEN
           IF ( fms_error_handler('diag_manager_modsend_data_3d',&
                & 'is_in and ie_in present, but js_in present without je_in', err_msg) ) THEN
+             DEALLOCATE(field_out)
              DEALLOCATE(oor_mask)
              RETURN
           END IF
@@ -1779,6 +1571,7 @@ CONTAINS
     IF ( PRESENT(je_in) ) THEN
        IF ( .NOT.PRESENT(js_in) ) THEN
           IF ( fms_error_handler('diag_manager_mod::send_data_3d', 'je_in present without js_in', err_msg) ) THEN
+             DEALLOCATE(field_out)
              DEALLOCATE(oor_mask)
              RETURN
           END IF
@@ -1786,6 +1579,7 @@ CONTAINS
        IF ( PRESENT(is_in) .AND. .NOT.PRESENT(ie_in) ) THEN
           IF ( fms_error_handler('diag_manager_mod::send_data_3d',&
                & 'js_in and je_in present, but is_in present without ie_in', err_msg)) THEN
+             DEALLOCATE(field_out)
              DEALLOCATE(oor_mask)
              RETURN
           END IF
@@ -1811,6 +1605,7 @@ CONTAINS
     twohi = n1-(ie-is+1)
     IF ( MOD(twohi,2) /= 0 ) THEN
        IF ( fms_error_handler('diag_manager_mod::send_data_3d', 'non-symmetric halos in first dimension', err_msg) ) THEN
+          DEALLOCATE(field_out)
           DEALLOCATE(oor_mask)
           RETURN
        END IF
@@ -1818,6 +1613,7 @@ CONTAINS
     twohj = n2-(je-js+1)
     IF ( MOD(twohj,2) /= 0 ) THEN
        IF ( fms_error_handler('diag_manager_mod::send_data_3d', 'non-symmetric halos in second dimension', err_msg) ) THEN
+          DEALLOCATE(field_out)
           DEALLOCATE(oor_mask)
           RETURN
        END IF
@@ -1842,7 +1638,15 @@ CONTAINS
 
     ! weight is for time averaging where each time level may has a different weight
     IF ( PRESENT(weight) ) THEN
-       weight1 = weight
+       SELECT TYPE (weight)
+       TYPE IS (real(kind=r4_kind))
+          weight1 = weight
+       TYPE IS (real(kind=r8_kind))
+          weight1 = real(weight)
+       CLASS DEFAULT
+          CALL error_mesg ('diag_manager_mod::send_data_3d',&
+               & 'The weight is not one of the supported types of real(kind=4) or real(kind=8)', FATAL)
+       END SELECT
     ELSE
        weight1 = 1.
     END IF
@@ -1871,13 +1675,13 @@ CONTAINS
           WRITE (error_string, '("[",ES14.5E3,",",ES14.5E3,"]")')&
                & input_fields(diag_field_id)%range(1:2)
           WRITE (error_string1, '("(Min: ",ES14.5E3,", Max: ",ES14.5E3, ")")')&
-                  & MINVAL(field(f1:f2,f3:f4,ks:ke),MASK=oor_mask(f1:f2,f3:f4,ks:ke)),&
-                  & MAXVAL(field(f1:f2,f3:f4,ks:ke),MASK=oor_mask(f1:f2,f3:f4,ks:ke))
+                  & MINVAL(field_out(f1:f2,f3:f4,ks:ke),MASK=oor_mask(f1:f2,f3:f4,ks:ke)),&
+                  & MAXVAL(field_out(f1:f2,f3:f4,ks:ke),MASK=oor_mask(f1:f2,f3:f4,ks:ke))
           IF ( missvalue_present ) THEN
              IF ( ANY(oor_mask(f1:f2,f3:f4,ks:ke) .AND.&
-                  &   ((field(f1:f2,f3:f4,ks:ke) < input_fields(diag_field_id)%range(1) .OR.&
-                  &     field(f1:f2,f3:f4,ks:ke) > input_fields(diag_field_id)%range(2)).AND.&
-                  &     field(f1:f2,f3:f4,ks:ke) .NE. missvalue)) ) THEN
+                  &   ((field_out(f1:f2,f3:f4,ks:ke) < input_fields(diag_field_id)%range(1) .OR.&
+                  &     field_out(f1:f2,f3:f4,ks:ke) > input_fields(diag_field_id)%range(2)).AND.&
+                  &     field_out(f1:f2,f3:f4,ks:ke) .NE. missvalue)) ) THEN
                 ! <ERROR STATUS="WARNING/FATAL">
                 !   A value for <module_name> in field <field_name> (Min: <min_val>, Max: <max_val>)
                 !   is outside the range [<lower_val>,<upper_val>] and not equal to the missing
@@ -1894,8 +1698,8 @@ CONTAINS
              END IF
           ELSE
              IF ( ANY(oor_mask(f1:f2,f3:f4,ks:ke) .AND.&
-                  &   (field(f1:f2,f3:f4,ks:ke) < input_fields(diag_field_id)%range(1) .OR.&
-                  &    field(f1:f2,f3:f4,ks:ke) > input_fields(diag_field_id)%range(2))) ) THEN
+                  &   (field_out(f1:f2,f3:f4,ks:ke) < input_fields(diag_field_id)%range(1) .OR.&
+                  &    field_out(f1:f2,f3:f4,ks:ke) > input_fields(diag_field_id)%range(2))) ) THEN
                 ! <ERROR STATUS="WARNING/FATAL">
                 !   A value for <module_name> in field <field_name> (Min: <min_val>, Max: <max_val>)
                 !   is outside the range [<lower_val>,<upper_val>].
@@ -1945,7 +1749,7 @@ CONTAINS
        time_min = output_fields(out_num)%time_min
        ! Sum output over time interval
        time_sum = output_fields(out_num)%time_sum
-       IF ( output_fields(out_num)%total_elements > SIZE(field(f1:f2,f3:f4,ks:ke)) ) THEN
+       IF ( output_fields(out_num)%total_elements > SIZE(field_out(f1:f2,f3:f4,ks:ke)) ) THEN
           output_fields(out_num)%phys_window = .TRUE.
        ELSE
           output_fields(out_num)%phys_window = .FALSE.
@@ -1989,6 +1793,7 @@ CONTAINS
                      & TRIM(output_fields(out_num)%output_name)
                 IF ( fms_error_handler('diag_manager_mod::send_data_3d', 'module/output_field '//TRIM(error_string)//&
                      & ', time must be present when output frequency = EVERY_TIME', err_msg)) THEN
+                   DEALLOCATE(field_out)
                    DEALLOCATE(oor_mask)
                    RETURN
                 END IF
@@ -2001,6 +1806,7 @@ CONTAINS
                & TRIM(output_fields(out_num)%output_name)
           IF ( fms_error_handler('diag_manager_mod::send_data_3d', 'module/output_field '//TRIM(error_string)//&
                & ', time must be present for nonstatic field', err_msg)) THEN
+             DEALLOCATE(field_out)
              DEALLOCATE(oor_mask)
              RETURN
           END IF
@@ -2020,6 +1826,7 @@ CONTAINS
                            & TRIM(output_fields(out_num)%output_name)
                       IF ( fms_error_handler('diag_manager_mod::send_data_3d', 'module/output_field '//TRIM(error_string)//&
                            & ' is skipped one time level in output data', err_msg)) THEN
+                         DEALLOCATE(field_out)
                          DEALLOCATE(oor_mask)
                          RETURN
                       END IF
@@ -2031,6 +1838,7 @@ CONTAINS
                    IF ( mpp_pe() .EQ. mpp_root_pe() ) THEN
                       IF(fms_error_handler('diag_manager_mod::send_data_3d','module/output_field '//TRIM(error_string)//&
                            & ', write EMPTY buffer', err_msg)) THEN
+                         DEALLOCATE(field_out)
                          DEALLOCATE(oor_mask)
                          RETURN
                       END IF
@@ -2045,6 +1853,7 @@ CONTAINS
           CALL check_bounds_are_exact_dynamic(out_num, diag_field_id, Time, err_msg=err_msg_local)
           IF ( err_msg_local /= '' ) THEN
              IF ( fms_error_handler('diag_manager_mod::send_data_3d', err_msg_local, err_msg) ) THEN
+                DEALLOCATE(field_out)
                 DEALLOCATE(oor_mask)
                 RETURN
              END IF
@@ -2060,6 +1869,7 @@ CONTAINS
                      & TRIM(output_fields(out_num)%output_name)
                 IF ( fms_error_handler('diag_manager_mod::send_data_3d', 'module/output_field '//TRIM(error_string)//&
                      & ', regional output NOT supported with mask_variant', err_msg)) THEN
+                   DEALLOCATE(field_out)
                    DEALLOCATE(oor_mask)
                    RETURN
                 END IF
@@ -2074,6 +1884,7 @@ CONTAINS
                       CALL check_out_of_bounds(out_num, diag_field_id, err_msg=err_msg_local)
                       IF ( err_msg_local /= '' ) THEN
                          IF ( fms_error_handler('diag_manager_mod::send_data_3d', err_msg_local, err_msg) ) THEN
+                            DEALLOCATE(field_out)
                             DEALLOCATE(oor_mask)
                             RETURN
                          END IF
@@ -2089,11 +1900,11 @@ CONTAINS
                                      IF ( pow_value /= 1 ) THEN
                                         output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) +&
-                                             & (field(i-is+1+hi, j-js+1+hj, k) * weight1)**(pow_value)
+                                             & (field_out(i-is+1+hi, j-js+1+hj, k) * weight1)**(pow_value)
                                      ELSE
                                         output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) +&
-                                             & field(i-is+1+hi, j-js+1+hj, k) * weight1
+                                             & field_out(i-is+1+hi, j-js+1+hj, k) * weight1
                                      END IF
                                      output_fields(out_num)%counter(i-hi,j-hj,k1,sample) =&
                                           & output_fields(out_num)%counter(i-hi,j-hj,k1,sample) + weight1
@@ -2109,11 +1920,11 @@ CONTAINS
                                      IF ( pow_value /= 1 ) THEN
                                         output_fields(out_num)%buffer(i-hi,j-hj,k,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k,sample) +&
-                                             & (field(i-is+1+hi,j-js+1+hj,k)*weight1)**(pow_value)
+                                             & (field_out(i-is+1+hi,j-js+1+hj,k)*weight1)**(pow_value)
                                      ELSE
                                         output_fields(out_num)%buffer(i-hi,j-hj,k,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k,sample) +&
-                                             & field(i-is+1+hi,j-js+1+hj,k)*weight1
+                                             & field_out(i-is+1+hi,j-js+1+hj,k)*weight1
                                      END IF
                                      output_fields(out_num)%counter(i-hi,j-hj,k,sample) =&
                                           &output_fields(out_num)%counter(i-hi,j-hj,k,sample) + weight1
@@ -2133,11 +1944,11 @@ CONTAINS
                                      IF ( pow_value /= 1 ) THEN
                                         output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) +&
-                                             & (field(i-is+1+hi, j-js+1+hj, k) * weight1)**(pow_value)
+                                             & (field_out(i-is+1+hi, j-js+1+hj, k) * weight1)**(pow_value)
                                      ELSE
                                         output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) +&
-                                             & field(i-is+1+hi, j-js+1+hj, k) * weight1
+                                             & field_out(i-is+1+hi, j-js+1+hj, k) * weight1
                                      END IF
                                      output_fields(out_num)%counter(i-hi,j-hj,k1,sample) =&
                                           & output_fields(out_num)%counter(i-hi,j-hj,k1,sample) + weight1
@@ -2153,11 +1964,11 @@ CONTAINS
                                      IF ( pow_value /= 1 ) THEN
                                         output_fields(out_num)%buffer(i-hi,j-hj,k,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k,sample) +&
-                                             & (field(i-is+1+hi,j-js+1+hj,k)*weight1)**(pow_value)
+                                             & (field_out(i-is+1+hi,j-js+1+hj,k)*weight1)**(pow_value)
                                      ELSE
                                         output_fields(out_num)%buffer(i-hi,j-hj,k,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k,sample) +&
-                                             & field(i-is+1+hi,j-js+1+hj,k)*weight1
+                                             & field_out(i-is+1+hi,j-js+1+hj,k)*weight1
                                      END IF
                                      output_fields(out_num)%counter(i-hi,j-hj,k,sample) =&
                                           &output_fields(out_num)%counter(i-hi,j-hj,k,sample) + weight1
@@ -2174,6 +1985,7 @@ CONTAINS
                         & TRIM(output_fields(out_num)%output_name)
                    IF ( fms_error_handler('diag_manager_mod::send_data_3d', 'module/output_field '//TRIM(error_string)//&
                         & ', variable mask but no missing value defined', err_msg)) THEN
+                      DEALLOCATE(field_out)
                       DEALLOCATE(oor_mask)
                       RETURN
                    END IF
@@ -2184,6 +1996,7 @@ CONTAINS
                      & TRIM(output_fields(out_num)%output_name)
                 IF(fms_error_handler('diag_manager_mod::send_data_3d','module/output_field '//TRIM(error_string)//&
                      & ', variable mask but no mask given', err_msg)) THEN
+                   DEALLOCATE(field_out)
                    DEALLOCATE(oor_mask)
                    RETURN
                 END IF
@@ -2204,11 +2017,11 @@ CONTAINS
                                         IF ( pow_value /= 1 ) THEN
                                            output_fields(out_num)%buffer(i1,j1,k1,sample) =&
                                                 & output_fields(out_num)%buffer(i1,j1,k1,sample) +&
-                                                & (field(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
+                                                & (field_out(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
                                         ELSE
                                            output_fields(out_num)%buffer(i1,j1,k1,sample) =&
                                                 & output_fields(out_num)%buffer(i1,j1,k1,sample) +&
-                                                & field(i-is+1+hi,j-js+1+hj,k) * weight1
+                                                & field_out(i-is+1+hi,j-js+1+hj,k) * weight1
                                         END IF
                                      ELSE
                                         output_fields(out_num)%buffer(i1,j1,k1,sample) = missvalue
@@ -2230,11 +2043,11 @@ CONTAINS
                                         IF ( pow_value /= 1 ) THEN
                                            output_fields(out_num)%buffer(i1,j1,k1,sample) =&
                                                 & output_fields(out_num)%buffer(i1,j1,k1,sample) +&
-                                                & (field(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
+                                                & (field_out(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
                                         ELSE
                                            output_fields(out_num)%buffer(i1,j1,k1,sample) =&
                                                 & output_fields(out_num)%buffer(i1,j1,k1,sample) +&
-                                                & field(i-is+1+hi,j-js+1+hj,k) * weight1
+                                                & field_out(i-is+1+hi,j-js+1+hj,k) * weight1
                                         END IF
                                      ELSE
                                         output_fields(out_num)%buffer(i1,j1,k1,sample) = missvalue
@@ -2265,11 +2078,11 @@ CONTAINS
                                      IF ( pow_value /= 1 ) THEN
                                         output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) +&
-                                             & (field(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
+                                             & (field_out(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
                                      ELSE
                                         output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) +&
-                                             & field(i-is+1+hi,j-js+1+hj,k) * weight1
+                                             & field_out(i-is+1+hi,j-js+1+hj,k) * weight1
                                      END IF
                                   ELSE
                                      output_fields(out_num)%buffer(i-hi,j-hj,k1,sample)= missvalue
@@ -2287,11 +2100,11 @@ CONTAINS
                                      IF ( pow_value /= 1 ) THEN
                                         output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) +&
-                                             & (field(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
+                                             & (field_out(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
                                      ELSE
                                         output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) +&
-                                             & field(i-is+1+hi,j-js+1+hj,k) * weight1
+                                             & field_out(i-is+1+hi,j-js+1+hj,k) * weight1
                                      END IF
                                   ELSE
                                      output_fields(out_num)%buffer(i-hi,j-hj,k1,sample)= missvalue
@@ -2307,6 +2120,7 @@ CONTAINS
                          CALL check_out_of_bounds(out_num, diag_field_id, err_msg=err_msg_local)
                          IF ( err_msg_local /= '' ) THEN
                             IF ( fms_error_handler('diag_manager_mod::send_data_3d', err_msg_local, err_msg) ) THEN
+                               DEALLOCATE(field_out)
                                DEALLOCATE(oor_mask)
                                RETURN
                             END IF
@@ -2320,11 +2134,11 @@ CONTAINS
                                      IF ( pow_value /= 1 ) THEN
                                         output_fields(out_num)%buffer(i-hi,j-hj,k,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k,sample) +&
-                                             & (field(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
+                                             & (field_out(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
                                      ELSE
                                         output_fields(out_num)%buffer(i-hi,j-hj,k,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k,sample) +&
-                                             & field(i-is+1+hi,j-js+1+hj,k) * weight1
+                                             & field_out(i-is+1+hi,j-js+1+hj,k) * weight1
                                      END IF
                                   ELSE
                                      output_fields(out_num)%buffer(i-hi,j-hj,k,sample)= missvalue
@@ -2341,11 +2155,11 @@ CONTAINS
                                      IF ( pow_value /= 1 ) THEN
                                         output_fields(out_num)%buffer(i-hi,j-hj,k,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k,sample) +&
-                                             & (field(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
+                                             & (field_out(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
                                      ELSE
                                         output_fields(out_num)%buffer(i-hi,j-hj,k,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k,sample) +&
-                                             & field(i-is+1+hi,j-js+1+hj,k) * weight1
+                                             & field_out(i-is+1+hi,j-js+1+hj,k) * weight1
                                      END IF
                                   ELSE
                                      output_fields(out_num)%buffer(i-hi,j-hj,k,sample)= missvalue
@@ -2389,10 +2203,10 @@ CONTAINS
                                   j1 =  j-l_start(2)-hj+1
                                   IF ( pow_value /= 1 ) THEN
                                      output_fields(out_num)%buffer(i1,j1,:,sample)= output_fields(out_num)%buffer(i1,j1,:,sample)+ &
-                                          & (field(i-is+1+hi,j-js+1+hj,l_start(3):l_end(3))*weight1)**(pow_value)
+                                          & (field_out(i-is+1+hi,j-js+1+hj,l_start(3):l_end(3))*weight1)**(pow_value)
                                   ELSE
                                      output_fields(out_num)%buffer(i1,j1,:,sample)= output_fields(out_num)%buffer(i1,j1,:,sample)+ &
-                                          & field(i-is+1+hi,j-js+1+hj,l_start(3):l_end(3))*weight1
+                                          & field_out(i-is+1+hi,j-js+1+hj,l_start(3):l_end(3))*weight1
                                END IF
                                END IF
                             END DO
@@ -2406,10 +2220,10 @@ CONTAINS
                                   j1 =  j-l_start(2)-hj+1
                                   IF ( pow_value /= 1 ) THEN
                                      output_fields(out_num)%buffer(i1,j1,:,sample)= output_fields(out_num)%buffer(i1,j1,:,sample)+ &
-                                          & (field(i-is+1+hi,j-js+1+hj,l_start(3):l_end(3))*weight1)**(pow_value)
+                                          & (field_out(i-is+1+hi,j-js+1+hj,l_start(3):l_end(3))*weight1)**(pow_value)
                                   ELSE
                                      output_fields(out_num)%buffer(i1,j1,:,sample)= output_fields(out_num)%buffer(i1,j1,:,sample)+ &
-                                          & field(i-is+1+hi,j-js+1+hj,l_start(3):l_end(3))*weight1
+                                          & field_out(i-is+1+hi,j-js+1+hj,l_start(3):l_end(3))*weight1
                                END IF
                                END IF
                             END DO
@@ -2434,11 +2248,11 @@ CONTAINS
                          IF ( pow_value /= 1 ) THEN
                             output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) =&
                                  & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) +&
-                                 & (field(f1:f2,f3:f4,ksr:ker)*weight1)**(pow_value)
+                                 & (field_out(f1:f2,f3:f4,ksr:ker)*weight1)**(pow_value)
                          ELSE
                             output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) =&
                                  & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) +&
-                                 & field(f1:f2,f3:f4,ksr:ker)*weight1
+                                 & field_out(f1:f2,f3:f4,ksr:ker)*weight1
                          END IF
                       ELSE
 !$OMP CRITICAL
@@ -2447,11 +2261,11 @@ CONTAINS
                          IF ( pow_value /= 1 ) THEN
                             output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) =&
                                  & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) +&
-                                 & (field(f1:f2,f3:f4,ksr:ker)*weight1)**(pow_value)
+                                 & (field_out(f1:f2,f3:f4,ksr:ker)*weight1)**(pow_value)
                          ELSE
                             output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) =&
                                  & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) +&
-                                 & field(f1:f2,f3:f4,ksr:ker)*weight1
+                                 & field_out(f1:f2,f3:f4,ksr:ker)*weight1
                          END IF
 !$OMP END CRITICAL
                       END IF
@@ -2461,6 +2275,7 @@ CONTAINS
                          CALL check_out_of_bounds(out_num, diag_field_id, err_msg=err_msg_local)
                          IF ( err_msg_local /= '') THEN
                             IF ( fms_error_handler('diag_manager_mod::send_data_3d', err_msg_local, err_msg) ) THEN
+                               DEALLOCATE(field_out)
                                DEALLOCATE(oor_mask)
                                RETURN
                             END IF
@@ -2470,22 +2285,22 @@ CONTAINS
                          IF ( pow_value /= 1 ) THEN
                             output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) =&
                                  & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) +&
-                                 & (field(f1:f2,f3:f4,ks:ke)*weight1)**(pow_value)
+                                 & (field_out(f1:f2,f3:f4,ks:ke)*weight1)**(pow_value)
                          ELSE
                             output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) =&
                                  & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) +&
-                                 & field(f1:f2,f3:f4,ks:ke)*weight1
+                                 & field_out(f1:f2,f3:f4,ks:ke)*weight1
                          END IF
                       ELSE
 !$OMP CRITICAL
                          IF ( pow_value /= 1 ) THEN
                             output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) =&
                                  & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) +&
-                                 & (field(f1:f2,f3:f4,ks:ke)*weight1)**(pow_value)
+                                 & (field_out(f1:f2,f3:f4,ks:ke)*weight1)**(pow_value)
                          ELSE
                             output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) =&
                                  & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) +&
-                                 & field(f1:f2,f3:f4,ks:ke)*weight1
+                                 & field_out(f1:f2,f3:f4,ks:ke)*weight1
                          END IF
 !$OMP END CRITICAL
                       END IF
@@ -2506,15 +2321,15 @@ CONTAINS
                                   IF ( l_start(1)+hi <= i .AND. i <= l_end(1)+hi .AND. l_start(2)+hj <= j .AND. j <= l_end(2)+hj) THEN
                                      i1 = i-l_start(1)-hi+1
                                      j1=  j-l_start(2)-hj+1
-                                     IF ( field(i-is+1+hi,j-js+1+hj,k) /= missvalue ) THEN
+                                     IF ( field_out(i-is+1+hi,j-js+1+hj,k) /= missvalue ) THEN
                                         IF ( pow_value /= 1 ) THEN
                                            output_fields(out_num)%buffer(i1,j1,k1,sample) =&
                                                 & output_fields(out_num)%buffer(i1,j1,k1,sample) +&
-                                                & (field(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
+                                                & (field_out(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
                                         ELSE
                                            output_fields(out_num)%buffer(i1,j1,k1,sample) =&
                                                 & output_fields(out_num)%buffer(i1,j1,k1,sample) +&
-                                                & field(i-is+1+hi,j-js+1+hj,k) * weight1
+                                                & field_out(i-is+1+hi,j-js+1+hj,k) * weight1
                                         END IF
                                      ELSE
                                         output_fields(out_num)%buffer(i1,j1,k1,sample) = missvalue
@@ -2532,15 +2347,15 @@ CONTAINS
                                   IF ( l_start(1)+hi <= i .AND. i <= l_end(1)+hi .AND. l_start(2)+hj <= j .AND. j <= l_end(2)+hj) THEN
                                      i1 = i-l_start(1)-hi+1
                                      j1=  j-l_start(2)-hj+1
-                                     IF ( field(i-is+1+hi,j-js+1+hj,k) /= missvalue ) THEN
+                                     IF ( field_out(i-is+1+hi,j-js+1+hj,k) /= missvalue ) THEN
                                         IF ( pow_value /= 1 ) THEN
                                            output_fields(out_num)%buffer(i1,j1,k1,sample) =&
                                                 & output_fields(out_num)%buffer(i1,j1,k1,sample) +&
-                                                & (field(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
+                                                & (field_out(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
                                         ELSE
                                            output_fields(out_num)%buffer(i1,j1,k1,sample) =&
                                                 & output_fields(out_num)%buffer(i1,j1,k1,sample) +&
-                                                & field(i-is+1+hi,j-js+1+hj,k) * weight1
+                                                & field_out(i-is+1+hi,j-js+1+hj,k) * weight1
                                         END IF
                                      ELSE
                                         output_fields(out_num)%buffer(i1,j1,k1,sample) = missvalue
@@ -2564,7 +2379,7 @@ CONTAINS
                          outer0: DO k = l_start(3), l_end(3)
                             DO j=l_start(2)+hj, l_end(2)+hj
                                DO i=l_start(1)+hi, l_end(1)+hi
-                                  IF ( field(i,j,k) /= missvalue ) THEN
+                                  IF ( field_out(i,j,k) /= missvalue ) THEN
                                      output_fields(out_num)%count_0d(sample) = output_fields(out_num)%count_0d(sample) + weight1
                                      EXIT outer0
                                   END IF
@@ -2581,15 +2396,15 @@ CONTAINS
                             k1 = k - ksr + 1
                             DO j=js, je
                                DO i=is, ie
-                                  IF ( field(i-is+1+hi,j-js+1+hj,k) /= missvalue ) THEN
+                                  IF ( field_out(i-is+1+hi,j-js+1+hj,k) /= missvalue ) THEN
                                      IF ( pow_value /= 1 ) THEN
                                         output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) +&
-                                             & (field(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
+                                             & (field_out(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
                                      ELSE
                                         output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) +&
-                                             & field(i-is+1+hi,j-js+1+hj,k) * weight1
+                                             & field_out(i-is+1+hi,j-js+1+hj,k) * weight1
                                      END IF
                                   ELSE
                                      output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) = missvalue
@@ -2605,15 +2420,15 @@ CONTAINS
                             k1 = k - ksr + 1
                             DO j=js, je
                                DO i=is, ie
-                                  IF ( field(i-is+1+hi,j-js+1+hj,k) /= missvalue ) THEN
+                                  IF ( field_out(i-is+1+hi,j-js+1+hj,k) /= missvalue ) THEN
                                      IF ( pow_value /= 1 ) THEN
                                         output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) +&
-                                             & (field(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
+                                             & (field_out(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
                                      ELSE
                                         output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) +&
-                                             & field(i-is+1+hi,j-js+1+hj,k) * weight1
+                                             & field_out(i-is+1+hi,j-js+1+hj,k) * weight1
                                      END IF
                                   ELSE
                                      output_fields(out_num)%buffer(i-hi,j-hj,k1,sample) = missvalue
@@ -2628,7 +2443,7 @@ CONTAINS
                          k1=k-ksr+1
                          DO j=f3, f4
                             DO i=f1, f2
-                               IF ( field(i,j,k) /= missvalue ) THEN
+                               IF ( field_out(i,j,k) /= missvalue ) THEN
                                   output_fields(out_num)%count_0d(sample) = output_fields(out_num)%count_0d(sample) + weight1
                                   EXIT outer3
                                END IF
@@ -2642,6 +2457,7 @@ CONTAINS
                          CALL check_out_of_bounds(out_num, diag_field_id, err_msg=err_msg_local)
                          IF ( err_msg_local /= '' ) THEN
                             IF ( fms_error_handler('diag_manager_mod::send_data_3d', err_msg_local, err_msg) ) THEN
+                               DEALLOCATE(field_out)
                                DEALLOCATE(oor_mask)
                                RETURN
                             END IF
@@ -2651,15 +2467,15 @@ CONTAINS
                          DO k=ks, ke
                             DO j=js, je
                                DO i=is, ie
-                                  IF ( field(i-is+1+hi,j-js+1+hj,k) /= missvalue )  THEN
+                                  IF ( field_out(i-is+1+hi,j-js+1+hj,k) /= missvalue )  THEN
                                      IF ( pow_value /= 1 ) THEN
                                         output_fields(out_num)%buffer(i-hi,j-hj,k,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k,sample) +&
-                                             & (field(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
+                                             & (field_out(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
                                      ELSE
                                         output_fields(out_num)%buffer(i-hi,j-hj,k,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k,sample) +&
-                                             & field(i-is+1+hi,j-js+1+hj,k) * weight1
+                                             & field_out(i-is+1+hi,j-js+1+hj,k) * weight1
                                      END IF
                                   ELSE
                                      output_fields(out_num)%buffer(i-hi,j-hj,k,sample) = missvalue
@@ -2672,15 +2488,15 @@ CONTAINS
                          DO k=ks, ke
                             DO j=js, je
                                DO i=is, ie
-                                  IF ( field(i-is+1+hi,j-js+1+hj,k) /= missvalue )  THEN
+                                  IF ( field_out(i-is+1+hi,j-js+1+hj,k) /= missvalue )  THEN
                                      IF ( pow_value /= 1 ) THEN
                                         output_fields(out_num)%buffer(i-hi,j-hj,k,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k,sample) +&
-                                             & (field(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
+                                             & (field_out(i-is+1+hi,j-js+1+hj,k) * weight1)**(pow_value)
                                      ELSE
                                         output_fields(out_num)%buffer(i-hi,j-hj,k,sample) =&
                                              & output_fields(out_num)%buffer(i-hi,j-hj,k,sample) +&
-                                             & field(i-is+1+hi,j-js+1+hj,k) * weight1
+                                             & field_out(i-is+1+hi,j-js+1+hj,k) * weight1
                                      END IF
                                   ELSE
                                      output_fields(out_num)%buffer(i-hi,j-hj,k,sample) = missvalue
@@ -2694,7 +2510,7 @@ CONTAINS
                       outer1: DO k=ks, ke
                          DO j=f3, f4
                             DO i=f1, f2
-                               IF ( field(i,j,k) /= missvalue ) THEN
+                               IF ( field_out(i,j,k) /= missvalue ) THEN
                                   output_fields(out_num)%count_0d(sample) = output_fields(out_num)%count_0d(sample) + weight1
                                   EXIT outer1
                                END IF
@@ -2713,10 +2529,10 @@ CONTAINS
                                   j1=  j-l_start(2)-hj+1
                                   IF ( pow_value /= 1 ) THEN
                                      output_fields(out_num)%buffer(i1,j1,:,sample)= output_fields(out_num)%buffer(i1,j1,:,sample) +&
-                                          & (field(i-is+1+hi,j-js+1+hj,l_start(3):l_end(3))*weight1)**(pow_value)
+                                          & (field_out(i-is+1+hi,j-js+1+hj,l_start(3):l_end(3))*weight1)**(pow_value)
                                   ELSE
                                      output_fields(out_num)%buffer(i1,j1,:,sample)= output_fields(out_num)%buffer(i1,j1,:,sample) +&
-                                          & field(i-is+1+hi,j-js+1+hj,l_start(3):l_end(3))*weight1
+                                          & field_out(i-is+1+hi,j-js+1+hj,l_start(3):l_end(3))*weight1
                                END IF
                                END IF
                             END DO
@@ -2730,10 +2546,10 @@ CONTAINS
                                   j1=  j-l_start(2)-hj+1
                                   IF ( pow_value /= 1 ) THEN
                                      output_fields(out_num)%buffer(i1,j1,:,sample)= output_fields(out_num)%buffer(i1,j1,:,sample) +&
-                                          & (field(i-is+1+hi,j-js+1+hj,l_start(3):l_end(3))*weight1)**(pow_value)
+                                          & (field_out(i-is+1+hi,j-js+1+hj,l_start(3):l_end(3))*weight1)**(pow_value)
                                   ELSE
                                      output_fields(out_num)%buffer(i1,j1,:,sample)= output_fields(out_num)%buffer(i1,j1,:,sample) +&
-                                          & field(i-is+1+hi,j-js+1+hj,l_start(3):l_end(3))*weight1
+                                          & field_out(i-is+1+hi,j-js+1+hj,l_start(3):l_end(3))*weight1
                                END IF
                                END IF
                             END DO
@@ -2759,22 +2575,22 @@ CONTAINS
                          IF ( pow_value /= 1 ) THEN
                             output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) =&
                                  & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) + &
-                                 & (field(f1:f2,f3:f4,ksr:ker)*weight1)**(pow_value)
+                                 & (field_out(f1:f2,f3:f4,ksr:ker)*weight1)**(pow_value)
                          ELSE
                             output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) =&
                                  & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) + &
-                                 & field(f1:f2,f3:f4,ksr:ker)*weight1
+                                 & field_out(f1:f2,f3:f4,ksr:ker)*weight1
                          END IF
                       ELSE
 !$OMP CRITICAL
                          IF ( pow_value /= 1 ) THEN
                             output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) =&
                                  & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) + &
-                                 & (field(f1:f2,f3:f4,ksr:ker)*weight1)**(pow_value)
+                                 & (field_out(f1:f2,f3:f4,ksr:ker)*weight1)**(pow_value)
                          ELSE
                             output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) =&
                                  & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) + &
-                                 & field(f1:f2,f3:f4,ksr:ker)*weight1
+                                 & field_out(f1:f2,f3:f4,ksr:ker)*weight1
                          END IF
 !$OMP END CRITICAL
                       END IF
@@ -2784,6 +2600,7 @@ CONTAINS
                          CALL check_out_of_bounds(out_num, diag_field_id, err_msg=err_msg_local)
                          IF ( err_msg_local /= '' ) THEN
                             IF ( fms_error_handler('diag_manager_mod::send_data_3d', err_msg_local, err_msg) ) THEN
+                               DEALLOCATE(field_out)
                                DEALLOCATE(oor_mask)
                                RETURN
                             END IF
@@ -2793,22 +2610,22 @@ CONTAINS
                          IF ( pow_value /= 1 ) THEN
                             output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) =&
                                  & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) +&
-                                 & (field(f1:f2,f3:f4,ks:ke)*weight1)**(pow_value)
+                                 & (field_out(f1:f2,f3:f4,ks:ke)*weight1)**(pow_value)
                          ELSE
                             output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) =&
                                  & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) +&
-                                 & field(f1:f2,f3:f4,ks:ke)*weight1
+                                 & field_out(f1:f2,f3:f4,ks:ke)*weight1
                          END IF
                       ELSE
 !$OMP CRITICAL
                          IF ( pow_value /= 1 ) THEN
                             output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) =&
                                  & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) +&
-                                 & (field(f1:f2,f3:f4,ks:ke)*weight1)**(pow_value)
+                                 & (field_out(f1:f2,f3:f4,ks:ke)*weight1)**(pow_value)
                          ELSE
                             output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) =&
                                  & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) +&
-                                 & field(f1:f2,f3:f4,ks:ke)*weight1
+                                 & field_out(f1:f2,f3:f4,ks:ke)*weight1
                          END IF
 !$OMP END CRITICAL
                       END IF
@@ -2840,8 +2657,8 @@ CONTAINS
                             i1 = i-l_start(1)-hi+1
                             j1=  j-l_start(2)-hj+1
                             IF ( mask(i-is+1+hi,j-js+1+hj,k) .AND.&
-                                 & field(i-is+1+hi,j-js+1+hj,k)>output_fields(out_num)%buffer(i1,j1,k1,sample)) THEN
-                               output_fields(out_num)%buffer(i1,j1,k1,sample) = field(i-is+1+hi,j-js+1+hj,k)
+                                 & field_out(i-is+1+hi,j-js+1+hj,k)>output_fields(out_num)%buffer(i1,j1,k1,sample)) THEN
+                               output_fields(out_num)%buffer(i1,j1,k1,sample) = field_out(i-is+1+hi,j-js+1+hj,k)
                             END IF
                          END IF
                       END DO
@@ -2852,22 +2669,23 @@ CONTAINS
                 ksr = l_start(3)
                 ker = l_end(3)
                 WHERE ( mask(f1:f2,f3:f4,ksr:ker) .AND. &
-                     & field(f1:f2,f3:f4,ksr:ker) > output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample))&
-                     & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) = field(f1:f2,f3:f4,ksr:ker)
+                     & field_out(f1:f2,f3:f4,ksr:ker) > output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample))&
+                     & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) = field_out(f1:f2,f3:f4,ksr:ker)
              ELSE
                 IF ( debug_diag_manager ) THEN
                    CALL update_bounds(out_num, is-hi, ie-hi, js-hj, je-hj, ks, ke)
                    CALL check_out_of_bounds(out_num, diag_field_id, err_msg=err_msg_local)
                    IF ( err_msg_local /= '' ) THEN
                       IF ( fms_error_handler('diag_manager_mod::send_data_3d', err_msg_local, err_msg) ) THEN
+                         DEALLOCATE(field_out)
                          DEALLOCATE(oor_mask)
                          RETURN
                       END IF
                    END IF
                 END IF
                 WHERE ( mask(f1:f2,f3:f4,ks:ke) .AND.&
-                     & field(f1:f2,f3:f4,ks:ke)>output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample))&
-                     & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) = field(f1:f2,f3:f4,ks:ke)
+                     & field_out(f1:f2,f3:f4,ks:ke)>output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample))&
+                     & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) = field_out(f1:f2,f3:f4,ks:ke)
              END IF
           ELSE
              IF ( need_compute ) THEN
@@ -2878,8 +2696,8 @@ CONTAINS
                          IF(l_start(1)+hi <= i .AND. i <= l_end(1)+hi .AND. l_start(2)+hj <= j .AND. j <= l_end(2)+hj ) THEN
                             i1 = i-l_start(1)-hi+1
                             j1 =  j-l_start(2)-hj+1
-                            IF ( field(i-is+1+hi,j-js+1+hj,k) > output_fields(out_num)%buffer(i1,j1,k1,sample) ) THEN
-                               output_fields(out_num)%buffer(i1,j1,k1,sample) = field(i-is+1+hi,j-js+1+hj,k)
+                            IF ( field_out(i-is+1+hi,j-js+1+hj,k) > output_fields(out_num)%buffer(i1,j1,k1,sample) ) THEN
+                               output_fields(out_num)%buffer(i1,j1,k1,sample) = field_out(i-is+1+hi,j-js+1+hj,k)
                             END IF
                          END IF
                       END DO
@@ -2889,21 +2707,22 @@ CONTAINS
              ELSE IF ( reduced_k_range ) THEN
                 ksr = l_start(3)
                 ker = l_end(3)
-                WHERE ( field(f1:f2,f3:f4,ksr:ker) > output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) ) &
-                     & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) = field(f1:f2,f3:f4,ksr:ker)
+                WHERE ( field_out(f1:f2,f3:f4,ksr:ker) > output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) ) &
+                     & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) = field_out(f1:f2,f3:f4,ksr:ker)
              ELSE
                 IF ( debug_diag_manager ) THEN
                    CALL update_bounds(out_num, is-hi, ie-hi, js-hj, je-hj, ks, ke)
                    CALL check_out_of_bounds(out_num, diag_field_id, err_msg=err_msg_local)
                    IF ( err_msg_local /= '' ) THEN
                       IF ( fms_error_handler('diag_manager_mod::send_data_3d', err_msg_local, err_msg) ) THEN
+                         DEALLOCATE(field_out)
                          DEALLOCATE(oor_mask)
                          RETURN
                       END IF
                    END IF
                 END IF
-                WHERE ( field(f1:f2,f3:f4,ks:ke) > output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) ) &
-                     & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) = field(f1:f2,f3:f4,ks:ke)
+                WHERE ( field_out(f1:f2,f3:f4,ks:ke) > output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) ) &
+                     & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) = field_out(f1:f2,f3:f4,ks:ke)
              END IF
           END IF
           output_fields(out_num)%count_0d(sample) = 1
@@ -2918,8 +2737,8 @@ CONTAINS
                             i1 = i-l_start(1)-hi+1
                             j1 =  j-l_start(2)-hj+1
                             IF ( mask(i-is+1+hi,j-js+1+hj,k) .AND.&
-                                 & field(i-is+1+hi,j-js+1+hj,k) < output_fields(out_num)%buffer(i1,j1,k1,sample) ) THEN
-                               output_fields(out_num)%buffer(i1,j1,k1,sample) = field(i-is+1+hi,j-js+1+hj,k)
+                                 & field_out(i-is+1+hi,j-js+1+hj,k) < output_fields(out_num)%buffer(i1,j1,k1,sample) ) THEN
+                               output_fields(out_num)%buffer(i1,j1,k1,sample) = field_out(i-is+1+hi,j-js+1+hj,k)
                             END IF
                          END IF
                       END DO
@@ -2930,22 +2749,23 @@ CONTAINS
                 ksr= l_start(3)
                 ker= l_end(3)
                 WHERE ( mask(f1:f2,f3:f4,ksr:ker) .AND.&
-                     & field(f1:f2,f3:f4,ksr:ker) < output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample)) &
-                     & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) = field(f1:f2,f3:f4,ksr:ker)
+                     & field_out(f1:f2,f3:f4,ksr:ker) < output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample)) &
+                     & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) = field_out(f1:f2,f3:f4,ksr:ker)
              ELSE
                 IF ( debug_diag_manager ) THEN
                    CALL update_bounds(out_num, is-hi, ie-hi, js-hj, je-hj, ks, ke)
                    CALL check_out_of_bounds(out_num, diag_field_id, err_msg=err_msg_local)
                    IF ( err_msg_local /= '' ) THEN
                       IF ( fms_error_handler('diag_manager_mod::send_data_3d', err_msg_local, err_msg) ) THEN
+                         DEALLOCATE(field_out)
                          DEALLOCATE(oor_mask)
                          RETURN
                       END IF
                    END IF
                 END IF
                 WHERE ( mask(f1:f2,f3:f4,ks:ke) .AND.&
-                     & field(f1:f2,f3:f4,ks:ke) < output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) ) &
-                     & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) = field(f1:f2,f3:f4,ks:ke)
+                     & field_out(f1:f2,f3:f4,ks:ke) < output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) ) &
+                     & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) = field_out(f1:f2,f3:f4,ks:ke)
              END IF
           ELSE
              IF ( need_compute ) THEN
@@ -2956,8 +2776,8 @@ CONTAINS
                          IF ( l_start(1)+hi <=i.AND.i<=l_end(1)+hi.AND.l_start(2)+hj<=j.AND.j<=l_end(2)+hj) THEN
                             i1 = i-l_start(1)-hi+1
                             j1=  j-l_start(2)-hj+1
-                            IF ( field(i-is+1+hi,j-js+1+hj,k) < output_fields(out_num)%buffer(i1,j1,k1,sample) ) THEN
-                               output_fields(out_num)%buffer(i1,j1,k1,sample) = field(i-is+1+hi,j-js+1+hj,k)
+                            IF ( field_out(i-is+1+hi,j-js+1+hj,k) < output_fields(out_num)%buffer(i1,j1,k1,sample) ) THEN
+                               output_fields(out_num)%buffer(i1,j1,k1,sample) = field_out(i-is+1+hi,j-js+1+hj,k)
                             END IF
                          END IF
                       END DO
@@ -2967,21 +2787,22 @@ CONTAINS
              ELSE IF ( reduced_k_range ) THEN
                 ksr= l_start(3)
                 ker= l_end(3)
-                WHERE ( field(f1:f2,f3:f4,ksr:ker) < output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) ) &
-                     output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) = field(f1:f2,f3:f4,ksr:ker)
+                WHERE ( field_out(f1:f2,f3:f4,ksr:ker) < output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) ) &
+                     output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) = field_out(f1:f2,f3:f4,ksr:ker)
              ELSE
                 IF ( debug_diag_manager ) THEN
                    CALL update_bounds(out_num, is-hi, ie-hi, js-hj, je-hj, ks, ke)
                    CALL check_out_of_bounds(out_num, diag_field_id, err_msg=err_msg_local)
                    IF ( err_msg_local /= '' ) THEN
                       IF ( fms_error_handler('diag_manager_mod::send_data_3d', err_msg_local, err_msg) ) THEN
+                         DEALLOCATE(field_out)
                          DEALLOCATE(oor_mask)
                          RETURN
                       END IF
                    END IF
                 END IF
-                WHERE ( field(f1:f2,f3:f4,ks:ke) < output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) )&
-                     & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) = field(f1:f2,f3:f4,ks:ke)
+                WHERE ( field_out(f1:f2,f3:f4,ks:ke) < output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) )&
+                     & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) = field_out(f1:f2,f3:f4,ks:ke)
              END IF
           END IF
           output_fields(out_num)%count_0d(sample) = 1
@@ -2998,7 +2819,7 @@ CONTAINS
                             IF ( mask(i-is+1+hi,j-js+1+hj,k) ) THEN
                                output_fields(out_num)%buffer(i1,j1,k1,sample) = &
                                     output_fields(out_num)%buffer(i1,j1,k1,sample) + &
-                                    field(i-is+1+hi,j-js+1+hj,k)
+                                    field_out(i-is+1+hi,j-js+1+hj,k)
                             END IF
                          END IF
                       END DO
@@ -3010,13 +2831,14 @@ CONTAINS
                 ker= l_end(3)
                 output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) = &
                      &   output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) + &
-                     &   field(f1:f2,f3:f4,ksr:ker)
+                     &   field_out(f1:f2,f3:f4,ksr:ker)
              ELSE
                 IF ( debug_diag_manager ) THEN
                    CALL update_bounds(out_num, is-hi, ie-hi, js-hj, je-hj, ks, ke)
                    CALL check_out_of_bounds(out_num, diag_field_id, err_msg=err_msg_local)
                    IF ( err_msg_local /= '' ) THEN
                       IF ( fms_error_handler('diag_manager_mod::send_data_3d', err_msg_local, err_msg) ) THEN
+                         DEALLOCATE(field_out)
                          DEALLOCATE(oor_mask)
                          RETURN
                       END IF
@@ -3025,7 +2847,7 @@ CONTAINS
                 WHERE ( mask(f1:f2,f3:f4,ks:ke) ) &
                      & output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) = &
                      &  output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) + &
-                     &  field(f1:f2,f3:f4,ks:ke)
+                     &  field_out(f1:f2,f3:f4,ks:ke)
              END IF
           ELSE
              IF ( need_compute ) THEN
@@ -3038,7 +2860,7 @@ CONTAINS
                             j1=  j-l_start(2)-hj+1
                             output_fields(out_num)%buffer(i1,j1,k1,sample) = &
                                &    output_fields(out_num)%buffer(i1,j1,k1,sample) + &
-                               &    field(i-is+1+hi,j-js+1+hj,k)
+                               &    field_out(i-is+1+hi,j-js+1+hj,k)
                          END IF
                       END DO
                    END DO
@@ -3048,13 +2870,14 @@ CONTAINS
                 ker= l_end(3)
                 output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) = &
                      &  output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) + &
-                     &  field(f1:f2,f3:f4,ksr:ker)
+                     &  field_out(f1:f2,f3:f4,ksr:ker)
              ELSE
                 IF ( debug_diag_manager ) THEN
                    CALL update_bounds(out_num, is-hi, ie-hi, js-hj, je-hj, ks, ke)
                    CALL check_out_of_bounds(out_num, diag_field_id, err_msg=err_msg_local)
                    IF ( err_msg_local /= '' ) THEN
                       IF ( fms_error_handler('diag_manager_mod::send_data_3d', err_msg_local, err_msg) ) THEN
+                         DEALLOCATE(field_out)
                          DEALLOCATE(oor_mask)
                          RETURN
                       END IF
@@ -3062,7 +2885,7 @@ CONTAINS
                 END IF
                 output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) = &
                 &    output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) + &
-                &    field(f1:f2,f3:f4,ks:ke)
+                &    field_out(f1:f2,f3:f4,ks:ke)
              END IF
           END IF
           output_fields(out_num)%count_0d(sample) = 1
@@ -3074,7 +2897,7 @@ CONTAINS
                    IF ( l_start(1)+hi <= i .AND. i <= l_end(1)+hi .AND. l_start(2)+hj <= j .AND. j <= l_end(2)+hj ) THEN
                       i1 = i-l_start(1)-hi+1
                       j1 = j-l_start(2)-hj+1
-                      output_fields(out_num)%buffer(i1,j1,:,sample) = field(i-is+1+hi,j-js+1+hj,l_start(3):l_end(3))
+                      output_fields(out_num)%buffer(i1,j1,:,sample) = field_out(i-is+1+hi,j-js+1+hj,l_start(3):l_end(3))
                    END IF
                 END DO
              END DO
@@ -3082,19 +2905,20 @@ CONTAINS
           ELSE IF ( reduced_k_range ) THEN
              ksr = l_start(3)
              ker = l_end(3)
-             output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) = field(f1:f2,f3:f4,ksr:ker)
+             output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,:,sample) = field_out(f1:f2,f3:f4,ksr:ker)
           ELSE
              IF ( debug_diag_manager ) THEN
                 CALL update_bounds(out_num, is-hi, ie-hi, js-hj, je-hj, ks, ke)
                 CALL check_out_of_bounds(out_num, diag_field_id, err_msg=err_msg_local)
                 IF ( err_msg_local /= '' ) THEN
                    IF ( fms_error_handler('diag_manager_mod::send_data_3d', err_msg_local, err_msg) ) THEN
+                      DEALLOCATE(field_out)
                       DEALLOCATE(oor_mask)
                       RETURN
                    END IF
                 END IF
              END IF
-             output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) = field(f1:f2,f3:f4,ks:ke)
+             output_fields(out_num)%buffer(is-hi:ie-hi,js-hj:je-hj,ks:ke,sample) = field_out(f1:f2,f3:f4,ks:ke)
           END IF
 
           IF ( PRESENT(mask) .AND. missvalue_present ) THEN
@@ -3141,6 +2965,7 @@ CONTAINS
           CALL check_bounds_are_exact_static(out_num, diag_field_id, err_msg=err_msg_local)
           IF ( err_msg_local /= '' ) THEN
              IF ( fms_error_handler('diag_manager_mod::send_data_3d', err_msg_local, err_msg)) THEN
+                DEALLOCATE(field_out)
                 DEALLOCATE(oor_mask)
                 RETURN
              END IF
@@ -3150,56 +2975,101 @@ CONTAINS
        ! If rmask and missing value present, then insert missing value
        IF ( PRESENT(rmask) .AND. missvalue_present ) THEN
           IF ( need_compute ) THEN
-             DO k = l_start(3), l_end(3)
-                k1 = k - l_start(3) + 1
-                DO j = js, je
-                   DO i = is, ie
-                      IF ( l_start(1)+hi <= i .AND. i <= l_end(1)+hi .AND. l_start(2)+hj <= j .AND. j <= l_end(2)+hj ) THEN
-                         i1 = i-l_start(1)-hi+1
-                         j1 =  j-l_start(2)-hj+1
-                         IF ( rmask(i-is+1+hi,j-js+1+hj,k) < 0.5 ) &
-                              & output_fields(out_num)%buffer(i1,j1,k1,sample) = missvalue
-                      END IF
+             SELECT TYPE (rmask)
+             TYPE IS (real(kind=r4_kind))
+                DO k = l_start(3), l_end(3)
+                   k1 = k - l_start(3) + 1
+                   DO j = js, je
+                      DO i = is, ie
+                         IF ( l_start(1)+hi <= i .AND. i <= l_end(1)+hi .AND. l_start(2)+hj <= j .AND. j <= l_end(2)+hj ) THEN
+                            i1 = i-l_start(1)-hi+1
+                            j1 =  j-l_start(2)-hj+1
+                            IF ( rmask(i-is+1+hi,j-js+1+hj,k) < 0.5_r4_kind ) &
+                                 & output_fields(out_num)%buffer(i1,j1,k1,sample) = missvalue
+                         END IF
+                      END DO
                    END DO
                 END DO
-             END DO
+             TYPE IS (real(kind=r8_kind))
+                DO k = l_start(3), l_end(3)
+                   k1 = k - l_start(3) + 1
+                   DO j = js, je
+                      DO i = is, ie
+                         IF ( l_start(1)+hi <= i .AND. i <= l_end(1)+hi .AND. l_start(2)+hj <= j .AND. j <= l_end(2)+hj ) THEN
+                            i1 = i-l_start(1)-hi+1
+                            j1 =  j-l_start(2)-hj+1
+                            IF ( rmask(i-is+1+hi,j-js+1+hj,k) < 0.5_r8_kind ) &
+                                 & output_fields(out_num)%buffer(i1,j1,k1,sample) = missvalue
+                         END IF
+                      END DO
+                   END DO
+                END DO
+             CLASS DEFAULT
+                CALL error_mesg ('diag_manager_mod::send_data_3d',&
+                     & 'The rmask is not one of the supported types of real(kind=4) or real(kind=8)', FATAL)
+             END SELECT
           ELSE IF ( reduced_k_range ) THEN
              ksr= l_start(3)
              ker= l_end(3)
-             DO k= ksr, ker
-                k1 = k - ksr + 1
-                DO j=js, je
-                   DO i=is, ie
-                      IF ( rmask(i-is+1+hi,j-js+1+hj,k) < 0.5 ) &
-                           & output_fields(out_num)%buffer(i-hi,j-hj,k1,sample)= missvalue
+             SELECT TYPE (rmask)
+             TYPE IS (real(kind=r4_kind))
+                DO k= ksr, ker
+                   k1 = k - ksr + 1
+                   DO j=js, je
+                      DO i=is, ie
+                         IF ( rmask(i-is+1+hi,j-js+1+hj,k) < 0.5_r4_kind ) &
+                              & output_fields(out_num)%buffer(i-hi,j-hj,k1,sample)= missvalue
+                      END DO
                    END DO
                 END DO
-             END DO
+             TYPE IS (real(kind=r8_kind))
+                DO k= ksr, ker
+                   k1 = k - ksr + 1
+                   DO j=js, je
+                      DO i=is, ie
+                         IF ( rmask(i-is+1+hi,j-js+1+hj,k) < 0.5_r8_kind ) &
+                              & output_fields(out_num)%buffer(i-hi,j-hj,k1,sample)= missvalue
+                      END DO
+                   END DO
+                END DO
+             CLASS DEFAULT
+                CALL error_mesg ('diag_manager_mod::send_data_3d',&
+                     & 'The rmask is not one of the supported types of real(kind=4) or real(kind=8)', FATAL)
+             END SELECT
           ELSE
-             DO k=ks, ke
-                DO j=js, je
-                   DO i=is, ie
-                      IF ( rmask(i-is+1+hi,j-js+1+hj,k) < 0.5 ) &
-                           & output_fields(out_num)%buffer(i-hi,j-hj,k,sample)= missvalue
+             SELECT TYPE (rmask)
+             TYPE IS (real(kind=r4_kind))
+                DO k=ks, ke
+                   DO j=js, je
+                      DO i=is, ie
+                         IF ( rmask(i-is+1+hi,j-js+1+hj,k) < 0.5_r4_kind ) &
+                              & output_fields(out_num)%buffer(i-hi,j-hj,k,sample)= missvalue
+                      END DO
                    END DO
                 END DO
-             END DO
+             TYPE IS (real(kind=r8_kind))
+                DO k=ks, ke
+                   DO j=js, je
+                      DO i=is, ie
+                         IF ( rmask(i-is+1+hi,j-js+1+hj,k) < 0.5_r8_kind ) &
+                              & output_fields(out_num)%buffer(i-hi,j-hj,k,sample)= missvalue
+                      END DO
+                   END DO
+                END DO
+             CLASS DEFAULT
+                CALL error_mesg ('diag_manager_mod::send_data_3d',&
+                     & 'The rmask is not one of the supported types of real(kind=4) or real(kind=8)', FATAL)
+             END SELECT
           END IF
        END IF
 
     END DO num_out_fields
 
+    DEALLOCATE(field_out)
     DEALLOCATE(oor_mask)
   END FUNCTION send_data_3d
-  ! </FUNCTION>
 
-  ! <FUNCTION NAME="send_tile_averaged_data1d" INTERFACE="send_tile_averaged_data">
-  !   <IN NAME="diag_field_id" TYPE="INTEGER"></IN>
-  !   <IN NAME="field" TYPE="REAL, DIMENSION(:,:,:)"></IN>
-  !   <IN NAME="area" TYPE="REAL, DIMENSION(:,:,:)">  </IN>
-  !   <IN NAME="time" TYPE="TYPE(time_type)">  </IN>
-  !   <IN NAME="mask" TYPE="LOGICAL, DIMENSION(:,:,:), OPTIONAL"></IN>
-  !> @return Logical send_tile_averaged_data1d
+  !> @return true if send is successful
   LOGICAL FUNCTION send_tile_averaged_data1d ( id, field, area, time, mask )
     INTEGER, INTENT(in) :: id  !< id od the diagnostic field
     REAL, INTENT(in) :: field(:,:) !< field to average and send
@@ -3219,19 +3089,7 @@ CONTAINS
     send_tile_averaged_data1d = send_data(id, out, time=time, mask=ANY(mask,DIM=2))
   END FUNCTION send_tile_averaged_data1d
 
-  ! <SUBROUTINE NAME="average_tiles1d">
-  !   <OVERVIEW>
-  !   </OVERVIEW>
-  !   <TEMPLATE>
-  !     SUBROUTINE average_tiles1d(diag_field_id, x, area, mask, out)
-  !   </TEMPLATE>
-  !   <DESCRIPTION>
-  !   </DESCRIPTION>
-  !   <IN NAME="diag_field_id" TYPE="INTEGER"></IN>
-  !   <IN NAME="x" TYPE="REAL, DIMENSION(:,:)">(ug_index, tile) field to average</IN>
-  !   <IN NAME="area" TYPE="REAL, DIMENSION(:,:,:)">(ug_index, tile) fractional area</IN>
-  !   <IN NAME="mask" TYPE="LOGICAL, DIMENSION(:,:,:)">(ug_index, tile) land mask</IN>
-  !   <OUT NAME="out" TYPE="REAL, DIMENSION(:,:)">(ug_index) result of averaging</OUT>
+  !> @brief Calculates average for a field with the given area and land mask
   SUBROUTINE average_tiles1d(diag_field_id, x, area, mask, out)
     INTEGER, INTENT(in) :: diag_field_id
     REAL, DIMENSION(:,:), INTENT(in) :: x !< (ug_index, tile) field to average
@@ -3278,14 +3136,7 @@ CONTAINS
     END WHERE
   END SUBROUTINE average_tiles1d
 
-
-  ! <FUNCTION NAME="send_tile_averaged_data2d" INTERFACE="send_tile_averaged_data">
-  !   <IN NAME="diag_field_id" TYPE="INTEGER"></IN>
-  !   <IN NAME="field" TYPE="REAL, DIMENSION(:,:,:)"></IN>
-  !   <IN NAME="area" TYPE="REAL, DIMENSION(:,:,:)">  </IN>
-  !   <IN NAME="time" TYPE="TYPE(time_type)">  </IN>
-  !   <IN NAME="mask" TYPE="LOGICAL, DIMENSION(:,:,:), OPTIONAL"></IN>
-  !> @return Logical send_tile_averaged_data2d
+  !> @return true if send is successful
   LOGICAL FUNCTION send_tile_averaged_data2d ( id, field, area, time, mask )
     INTEGER, INTENT(in) :: id  !< id od the diagnostic field
     REAL, INTENT(in) :: field(:,:,:) !< field to average and send
@@ -3304,15 +3155,8 @@ CONTAINS
     CALL average_tiles(id, field, area, mask, out)
     send_tile_averaged_data2d = send_data(id, out, time, mask=ANY(mask,DIM=3))
   END FUNCTION send_tile_averaged_data2d
-  ! </FUNCTION>
 
-  ! <FUNCTION NAME="send_tile_averaged_data3d" INTERFACE="send_tile_averaged_data">
-  !   <IN NAME="diag_field_id" TYPE="INTEGER"></IN>
-  !   <IN NAME="field" TYPE="REAL, DIMENSION(:,:,:,:)"></IN>
-  !   <IN NAME="area" TYPE="REAL, DIMENSION(:,:,:)"></IN>
-  !   <IN NAME="time" TYPE="TYPE(time_type)"></IN>
-  !   <IN NAME="mask" TYPE="LOGICAL, DIMENSION(:,:,:), OPTIONAL">  </IN>
-  !> @return Logical send_tile_averaged_data3d
+  !> @return true if send is successful
   LOGICAL FUNCTION send_tile_averaged_data3d( id, field, area, time, mask )
     INTEGER, INTENT(in) :: id !< id of the diagnostic field
     REAL, DIMENSION(:,:,:,:), INTENT(in) :: field !< (lon, lat, tile, lev) field to average and send
@@ -3341,21 +3185,8 @@ CONTAINS
 
     send_tile_averaged_data3d = send_data( id, out, time, mask=mask3 )
   END FUNCTION send_tile_averaged_data3d
-  ! </FUNCTION>
 
-  ! <SUBROUTINE NAME="average_tiles">
-  !   <OVERVIEW>
-  !   </OVERVIEW>
-  !   <TEMPLATE>
-  !     SUBROUTINE average_tiles(diag_field_id, x, area, mask, out)
-  !   </TEMPLATE>
-  !   <DESCRIPTION>
-  !   </DESCRIPTION>
-  !   <IN NAME="diag_field_id" TYPE="INTEGER"></IN>
-  !   <IN NAME="x" TYPE="REAL, DIMENSION(:,:,:)">(lon, lat, tile) field to average</IN>
-  !   <IN NAME="area" TYPE="REAL, DIMENSION(:,:,:)">(lon, lat, tile) fractional area</IN>
-  !   <IN NAME="mask" TYPE="LOGICAL, DIMENSION(:,:,:)">(lon, lat, tile) land mask</IN>
-  !   <OUT NAME="out" TYPE="REAL, DIMENSION(:,:)">(lon, lat) result of averaging</OUT>
+  !> @brief Calculates tile average of a field
   SUBROUTINE average_tiles(diag_field_id, x, area, mask, out)
     INTEGER, INTENT(in) :: diag_field_id
     REAL, DIMENSION(:,:,:), INTENT(in) :: x !< (lon, lat, tile) field to average
@@ -3401,7 +3232,6 @@ CONTAINS
        out(:,:) = local_missing_value
     END WHERE
   END SUBROUTINE average_tiles
-  ! </SUBROUTINE>
 
   !> @return Integer writing_field
   INTEGER FUNCTION writing_field(out_num, at_diag_end, error_string, time)
@@ -3418,7 +3248,6 @@ CONTAINS
     INTEGER :: b1,b2,b3,b4 !< size of buffer along x,y,z,and diurnal axes
     INTEGER :: i, j, k, m
     REAL    :: missvalue, num
-    real,allocatable,dimension(:,:,:,:) :: diurnal_buffer
     writing_field = 0
 
     need_compute = output_fields(out_num)%need_compute
@@ -3518,17 +3347,6 @@ CONTAINS
     ! Output field
     IF ( at_diag_end .AND. freq == END_OF_RUN ) output_fields(out_num)%next_output = time
 ! if (time .eq. output_fields(out_num)%next_output) then
-    if (output_fields(out_num)%n_diurnal_samples > 1) then
-          !> allocate the buffer for diurnal data
-          allocate(diurnal_buffer(size(output_fields(out_num)%buffer,1),size(output_fields(out_num)%buffer,2),&
-                    size(output_fields(out_num)%buffer,4),size(output_fields(out_num)%buffer,3)))
-          !> swap the last 2 axes in the data buffer to match the netcdf output order
-          do i = 1,size(output_fields(out_num)%buffer,4)
-          do j = 1,size(output_fields(out_num)%buffer,3)
-               diurnal_buffer(:,:,i,j) = output_fields(out_num)%buffer(:,:,j,i)
-          enddo
-          enddo
-    endif
     IF ( (output_fields(out_num)%time_ops) .AND. (.NOT. mix_snapshot_average_fields) ) THEN
        middle_time = (output_fields(out_num)%last_output+output_fields(out_num)%next_output)/2
        if (trim(files(file_num)%filename_time_bounds) == "begin") then
@@ -3539,22 +3357,11 @@ CONTAINS
            filename_time = output_fields(out_num)%next_output
        endif
 
-       if (output_fields(out_num)%n_diurnal_samples > 1) then
-          CALL diag_data_out(file_num, out_num, diurnal_buffer, middle_time, &
-                 & use_mpp_io_arg=use_mpp_io, filename_time=filename_time)
-       else
-          CALL diag_data_out(file_num, out_num, output_fields(out_num)%buffer, middle_time, &
-                 & use_mpp_io_arg=use_mpp_io, filename_time=filename_time)
-       endif
+       CALL diag_data_out(file_num, out_num, output_fields(out_num)%buffer, middle_time, &
+                 & filename_time=filename_time)
     ELSE
-       if (output_fields(out_num)%n_diurnal_samples > 1) then
-            CALL diag_data_out(file_num, out_num, &
-                 & diurnal_buffer, output_fields(out_num)%next_output, use_mpp_io_arg=use_mpp_io)
-       else
-            CALL diag_data_out(file_num, out_num, &
-                 & output_fields(out_num)%buffer, output_fields(out_num)%next_output,&
-                 & use_mpp_io_arg=use_mpp_io)
-       endif
+       CALL diag_data_out(file_num, out_num, &
+                 & output_fields(out_num)%buffer, output_fields(out_num)%next_output)
     END IF
 !output_fields(out_num)%last_output = output_fields(out_num)%next_output
 ! endif
@@ -3583,7 +3390,6 @@ CONTAINS
        END IF
        IF ( input_fields(in_num)%mask_variant .AND. average ) output_fields(out_num)%counter = 0.0
     END IF
-    if (allocated(diurnal_buffer))deallocate(diurnal_buffer)
   END FUNCTION writing_field
 
   SUBROUTINE diag_manager_set_time_end(Time_end_in)
@@ -3594,11 +3400,12 @@ CONTAINS
   END SUBROUTINE diag_manager_set_time_end
 
   !-----------------------------------------------------------------------
-  !>@brief The subroutine 'diag_send_complete_instant' allows the user to
+  !> @brief The subroutine 'diag_send_complete_instant' allows the user to
   !! save diagnostic data on variable intervals (user defined in code logic)
   !! to the same file.  The argument (time_type) will be written to the
   !! time axis correspondingly.
-  !>@details The user is responsible for any averaging of accumulated data
+  !!
+  !> The user is responsible for any averaging of accumulated data
   !! as this routine is not designed for instantaneous values.  This routine
   !! works only for send_data calls within OpenMP regions as they are buffered
   !! until the complete signal is given.
@@ -3617,14 +3424,14 @@ CONTAINS
                & (input_fields(in_num)%active_omp_level.LE.1) ) CYCLE
           file_num = output_fields(out_num)%output_file
           CALL diag_data_out(file_num, out_num, &
-               & output_fields(out_num)%buffer, time, &
-               & use_mpp_io_arg=use_mpp_io)
+               & output_fields(out_num)%buffer, time)
         END DO
       END IF
     END DO
   END SUBROUTINE diag_send_complete_instant
 
   !-----------------------------------------------------------------------
+  !> @brief Saves diagnostic data for the given time value.
   SUBROUTINE diag_send_complete(time_step, err_msg)
     TYPE (time_type), INTENT(in)           :: time_step
     character(len=*), INTENT(out), optional :: err_msg
@@ -3695,17 +3502,15 @@ CONTAINS
     INTEGER :: file
 
     IF ( do_diag_field_log ) THEN
-       CALL mpp_close (diag_log_unit)
+       close (diag_log_unit)
     END IF
     DO file = 1, num_files
        CALL closing_file(file, time)
     END DO
-  if (.not.use_mpp_io) then
     if (allocated(fileobjU)) deallocate(fileobjU)
     if (allocated(fileobj)) deallocate(fileobj)
     if (allocated(fileobjND)) deallocate(fileobjND)
-  if (allocated(fnum_for_domain)) deallocate(fnum_for_domain)
-  endif
+    if (allocated(fnum_for_domain)) deallocate(fnum_for_domain)
   END SUBROUTINE diag_manager_end
 
   !> @brief Replaces diag_manager_end; close just one file: files(file)
@@ -3717,7 +3522,6 @@ CONTAINS
     INTEGER :: stdout_unit
     LOGICAL :: reduced_k_range, need_compute, local_output
     CHARACTER(len=128) :: message
-    real,allocatable,dimension(:,:,:,:) :: diurnal_buffer
 
     stdout_unit = stdout()
 
@@ -3768,25 +3572,11 @@ CONTAINS
                & TRIM(output_fields(i)%output_name)//' NOT available,'//&
                & ' check if output interval > runlength. Netcdf fill_values are written', NOTE)
           output_fields(i)%buffer = FILL_VALUE
-          if (output_fields(i)%n_diurnal_samples > 1) then
-               !> allocate the buffer for diurnal data
-               if (.not. allocated(diurnal_buffer)) &
-                    allocate(diurnal_buffer(size(output_fields(i)%buffer,1),size(output_fields(i)%buffer,2),&
-                    size(output_fields(i)%buffer,4),size(output_fields(i)%buffer,3)))
-               !> swap the last 2 axes in the data buffer to match the netcdf output order
-               do loop1 = 1,size(output_fields(i)%buffer,4)
-               do loop2 = 1,size(output_fields(i)%buffer,3)
-                    diurnal_buffer(:,:,loop1,loop2) = output_fields(i)%buffer(:,:,loop2,loop1)
-               enddo
-               enddo
-               CALL diag_data_out(file, i, diurnal_buffer, time, .TRUE., use_mpp_io_arg=use_mpp_io)
-          else
-          CALL diag_data_out(file, i, output_fields(i)%buffer, time, .TRUE., use_mpp_io_arg=use_mpp_io)
-          endif
+          CALL diag_data_out(file, i, output_fields(i)%buffer, time, .TRUE.)
        END IF
     END DO
     ! Now it's time to output static fields
-    CALL write_static(file, use_mpp_io)
+    CALL write_static(file)
 
     ! Write out the number of bytes of data saved to this file
     IF ( write_bytes_in_file ) THEN
@@ -3795,7 +3585,6 @@ CONTAINS
             & WRITE (stdout_unit,'(a,i12,a,a)') 'Diag_Manager: ',files(file)%bytes_written, &
             & ' bytes of data written to file ',TRIM(files(file)%name)
     END IF
-     if (allocated(diurnal_buffer)) deallocate(diurnal_buffer)
   END SUBROUTINE closing_file
 
   !> @brief Initialize Diagnostics Manager.
@@ -3814,9 +3603,6 @@ CONTAINS
     INTEGER, ALLOCATABLE, DIMENSION(:) :: pelist
     INTEGER :: stdlog_unit, stdout_unit
     integer :: j
-#ifndef INTERNAL_FILE_NML
-    INTEGER :: nml_unit
-#endif
     CHARACTER(len=256) :: err_msg_local
 
     NAMELIST /diag_manager_nml/ append_pelist_name, mix_snapshot_average_fields, max_output_fields, &
@@ -3865,23 +3651,12 @@ CONTAINS
        END IF
     END IF
 
-#ifdef INTERNAL_FILE_NML
     READ (input_nml_file, NML=diag_manager_nml, IOSTAT=mystat)
-#else
-    IF ( file_exist('input.nml') ) THEN
-       nml_unit = open_namelist_file()
-       READ (nml_unit, diag_manager_nml, iostat=mystat)
-       CALL close_file(nml_unit)
-    ELSE
-       ! Set mystat to an arbitrary positive number if input.nml does not exist.
-       mystat = 100
-    END IF
-#endif
     ! Check the status of reading the diag_manager_nml
 
     IF ( check_nml_error(IOSTAT=mystat, NML_NAME='DIAG_MANAGER_NML') < 0 ) THEN
        IF ( mpp_pe() == mpp_root_pe() ) THEN
-          CALL error_mesg('diag_manager_mod::diag_manager_init', 'DIAG_MANAGER_NML not found in input.nml.  Using defaults.',&
+          CALL error_mesg('diag_manager_mod::diag_manager_init', 'DIAG_MANAGER_NML not found in input nml file.  Using defaults.',&
                & WARNING)
        END IF
     END IF
@@ -3895,16 +3670,6 @@ CONTAINS
        err_msg_local = ''
        WRITE (err_msg_local,'(ES8.1E2)') CMOR_MISSING_VALUE
        CALL error_mesg('diag_manager_mod::diag_manager_init', 'Using CMOR missing value ('//TRIM(err_msg_local)//').', NOTE)
-    END IF
-
-    ! Issue note if attempting to set diag_manager_nml::max_files larger than
-    ! mpp_get_maxunits() -- Default is 1024 set in mpp_io.F90
-    IF ( max_files .GT. mpp_get_maxunits() ) THEN
-       err_msg_local = ''
-       WRITE (err_msg_local,'(A,I6,A,I6,A,I6,A)') "DIAG_MANAGER_NML variable 'max_files' (",max_files,") is larger than '",&
-            & mpp_get_maxunits(),"'.  Forcing 'max_files' to be ",mpp_get_maxunits(),"."
-       CALL error_mesg('diag_manager_mod::diag_managet_init', TRIM(err_msg_local), NOTE)
-       max_files = mpp_get_maxunits()
     END IF
 
     ! How to handle Out of Range Warnings.
@@ -3942,10 +3707,8 @@ CONTAINS
                & 'diag_manager is using fms2_io', NOTE)
     else
        CALL error_mesg('diag_manager_mod::diag_manager_init',&
-               & 'diag_manager is using mpp_io', NOTE)
-       CALL error_mesg('diag_manager_mod::diag_manager_init',&
-             &'MPP_IO is no longer supported.  Please remove from namelist',&
-              &WARNING)
+             &'MPP_IO is no longer supported.  Please remove use_mpp_io from diag_manager_nml namelist',&
+              &FATAL)
     endif
     ALLOCATE(pelist(mpp_npes()))
     CALL mpp_get_current_pelist(pelist, pelist_name)
@@ -3974,7 +3737,7 @@ CONTAINS
 
     ! open diag field log file
     IF ( do_diag_field_log.AND.mpp_pe().EQ.mpp_root_pe() ) THEN
-       CALL mpp_open(diag_log_unit, 'diag_field_log.out', nohdrs=.TRUE.)
+       open(newunit=diag_log_unit, file='diag_field_log.out', action='WRITE')
        WRITE (diag_log_unit,'(777a)') &
             & 'Module',        SEP, 'Field',          SEP, 'Long Name',    SEP,&
             & 'Units',         SEP, 'Number of Axis', SEP, 'Time Axis',    SEP,&
@@ -4091,7 +3854,6 @@ CONTAINS
        init_diurnal_axis = diag_axis_init(name, DATA, units, 'N', 'time of day', set_name='diurnal', edges=edges_id)
     END IF
   END FUNCTION init_diurnal_axis
-  ! </FUNCTION>
 
   SUBROUTINE diag_field_attribute_init(diag_field_id, name, type, cval, ival, rval)
     INTEGER, INTENT(in) :: diag_field_id !< input field ID, obtained from diag_manager_mod::register_diag_field.
@@ -4253,77 +4015,59 @@ CONTAINS
     END IF
   END SUBROUTINE diag_field_attribute_init
 
-  ! <SUBROUTINE NAME="diag_field_add_attribute_scalar_r" INTERFACE="diag_field_add_attribute">
-  !   <IN NAME="diag_field_id" TYPE="INTEGER" />
-  !   <IN NAME="att_name" TYPE="CHARACTER(len=*)" />
-  !   <IN NAME="att_value" TYPE="REAL" />
+  !> @brief Add a scalar real attribute to the diag field corresponding to a given id
   SUBROUTINE diag_field_add_attribute_scalar_r(diag_field_id, att_name, att_value)
-    INTEGER, INTENT(in) :: diag_field_id
-    CHARACTER(len=*), INTENT(in) :: att_name
-    REAL, INTENT(in) :: att_value
+    INTEGER, INTENT(in) :: diag_field_id !< ID number for field to add attribute to
+    CHARACTER(len=*), INTENT(in) :: att_name !< new attribute name
+    REAL, INTENT(in) :: att_value !< new attribute value
 
     CALL diag_field_add_attribute_r1d(diag_field_id, att_name, (/ att_value /))
   END SUBROUTINE diag_field_add_attribute_scalar_r
-  ! </SUBROUTINE>
 
-  ! <SUBROUTINE NAME="diag_field_add_attribute_scalar_i" INTERFACE="diag_field_add_attribute">
-  !   <IN NAME="diag_field_id" TYPE="INTEGER" />
-  !   <IN NAME="att_name" TYPE="CHARACTER(len=*)" />
-  !   <IN NAME="att_value" TYPE="INTEGER" />
+  !> @brief Add a scalar integer attribute to the diag field corresponding to a given id
   SUBROUTINE diag_field_add_attribute_scalar_i(diag_field_id, att_name, att_value)
-    INTEGER, INTENT(in) :: diag_field_id
-    CHARACTER(len=*), INTENT(in) :: att_name
-    INTEGER, INTENT(in) :: att_value
+    INTEGER, INTENT(in) :: diag_field_id !< ID number for field to add attribute to
+    CHARACTER(len=*), INTENT(in) :: att_name !< new attribute name
+    INTEGER, INTENT(in) :: att_value !< new attribute value
 
     CALL diag_field_add_attribute_i1d(diag_field_id, att_name, (/ att_value /))
   END SUBROUTINE diag_field_add_attribute_scalar_i
-  ! </SUBROUTINE>
 
-  ! <SUBROUTINE NAME="diag_field_add_attribute_scalar_c" INTERFACE="diag_field_add_attribute">
-  !   <IN NAME="diag_field_id" TYPE="INTEGER" />
-  !   <IN NAME="att_name" TYPE="CHARACTER(len=*)" />
-  !   <IN NAME="att_value" TYPE="CHARACTER(len=*)" />
+  !> @brief Add a scalar character attribute to the diag field corresponding to a given id
   SUBROUTINE diag_field_add_attribute_scalar_c(diag_field_id, att_name, att_value)
-    INTEGER, INTENT(in) :: diag_field_id
-    CHARACTER(len=*), INTENT(in) :: att_name
-    CHARACTER(len=*), INTENT(in) :: att_value
+    INTEGER, INTENT(in) :: diag_field_id !< ID number for field to add attribute to
+    CHARACTER(len=*), INTENT(in) :: att_name !< new attribute name
+    CHARACTER(len=*), INTENT(in) :: att_value !< new attribute value
 
     CALL diag_field_attribute_init(diag_field_id, att_name, NF90_CHAR, cval=att_value)
   END SUBROUTINE diag_field_add_attribute_scalar_c
-  ! </SUBROUTINE>
 
-  ! <SUBROUTINE NAME="diag_field_add_attribute_r1d" INTERFACE="diag_field_add_attribute">
-  !   <IN NAME="diag_field_id" TYPE="INTEGER" />
-  !   <IN NAME="att_name" TYPE="CHARACTER(len=*)" />
-  !   <IN NAME="att_value" TYPE="REAL, DIMENSION(:)" />
+  !> @brief Add a real 1D array attribute to the diag field corresponding to a given id
   SUBROUTINE diag_field_add_attribute_r1d(diag_field_id, att_name, att_value)
-    INTEGER, INTENT(in) :: diag_field_id
-    CHARACTER(len=*), INTENT(in) :: att_name
-    REAL, DIMENSION(:), INTENT(in) :: att_value
+    INTEGER, INTENT(in) :: diag_field_id !< ID number for field to add attribute to
+    CHARACTER(len=*), INTENT(in) :: att_name !< new attribute name
+    REAL, DIMENSION(:), INTENT(in) :: att_value !< new attribute value
 
     INTEGER :: num_attributes, len
     CHARACTER(len=512) :: err_msg
 
     CALL diag_field_attribute_init(diag_field_id, att_name, NF90_FLOAT, rval=att_value)
   END SUBROUTINE diag_field_add_attribute_r1d
-  ! </SUBROUTINE>
 
-  ! <SUBROUTINE NAME="diag_field_add_attribute_i1d" INTERFACE="diag_field_add_attribute">
-  !   <IN NAME="diag_field_id" TYPE="INTEGER" />
-  !   <IN NAME="att_name" TYPE="CHARACTER(len=*)" />
-  !   <IN NAME="att_value" TYPE="INTEGER, DIMENSION(:)" />
+  !> @brief Add an integer 1D array attribute to the diag field corresponding to a given id
   SUBROUTINE diag_field_add_attribute_i1d(diag_field_id, att_name, att_value)
-    INTEGER, INTENT(in) :: diag_field_id
-    CHARACTER(len=*), INTENT(in) :: att_name
-    INTEGER, DIMENSION(:), INTENT(in) :: att_value
+    INTEGER, INTENT(in) :: diag_field_id !< ID number for field to add attribute to
+    CHARACTER(len=*), INTENT(in) :: att_name !< new attribute name
+    INTEGER, DIMENSION(:), INTENT(in) :: att_value !< new attribute value
 
     CALL diag_field_attribute_init(diag_field_id, att_name, NF90_INT, ival=att_value)
   END SUBROUTINE diag_field_add_attribute_i1d
 
   !> @brief Add the cell_measures attribute to a diag out field
-  !! @details Add the cell_measures attribute to a give diag field.  This is useful if the
-  !!     area/volume fields for the diagnostic field are defined in another module after
-  !!     the diag_field.
+  !!
+  !> Add the cell_measures attribute to a give diag field.  This is useful if the
+  !! area/volume fields for the diagnostic field are defined in another module after
+  !! the diag_field.
   SUBROUTINE diag_field_add_cell_measures(diag_field_id, area, volume)
     INTEGER, INTENT(in) :: diag_field_id
     INTEGER, INTENT(in), OPTIONAL :: area !< diag ids of area
@@ -4343,5 +4087,7 @@ CONTAINS
        END DO
     END IF
   END SUBROUTINE diag_field_add_cell_measures
-  ! </SUBROUTINE>
+
 END MODULE diag_manager_mod
+!> @}
+! close documentation grouping

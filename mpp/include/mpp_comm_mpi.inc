@@ -1,6 +1,5 @@
 ! -*-f90-*-
 
-
 !***********************************************************************
 !*                   GNU Lesser General Public License
 !*
@@ -19,6 +18,9 @@
 !* You should have received a copy of the GNU Lesser General Public
 !* License along with FMS.  If not, see <http://www.gnu.org/licenses/>.
 !***********************************************************************
+!> @file
+!> @ingroup mpp
+!> @brief Routines to initialize and finalize @ref mpp_mod with mpi enabled.
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
@@ -27,13 +29,15 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !    subroutine mpp_init( flags, in, out, err, log )
   !      integer, optional, intent(in) :: flags, in, out, err, log
-  subroutine mpp_init( flags, localcomm, test_level )
+  !> @brief Initialize the @ref mpp_mod module
+  subroutine mpp_init( flags, localcomm, test_level, alt_input_nml_path )
   integer, optional, intent(in) :: flags
   integer, optional, intent(in) :: localcomm
   integer, optional, intent(in) :: test_level
+  character(len=*), optional, intent(in) :: alt_input_nml_path
   integer                       :: my_pe, num_pes, len, i, iunit
   logical                       :: opened, existed
-  integer                       :: unit_begin, unit_end, unit_nml, io_status
+  integer                       :: io_status
   integer                       :: t_level
   character(len=5) :: this_pe
   type(mpp_type), pointer :: dtype
@@ -108,27 +112,17 @@
   if (t_level == 3) return
 
   call mpp_init_logfile()
-  call read_input_nml
+  if (present(alt_input_nml_path)) then
+     call read_input_nml(alt_input_nml_path=alt_input_nml_path)
+  else
+     call read_input_nml
+  end if
   if (t_level == 4) return
 
   !--- read namelist
-#ifdef INTERNAL_FILE_NML
   read (input_nml_file, mpp_nml, iostat=io_status)
-#else
-  unit_begin = 103
-  unit_end   = 512
-  do unit_nml = unit_begin, unit_end
-     inquire( unit_nml,OPENED=opened )
-     if( .NOT.opened )exit
-  end do
-
-  open(unit_nml,file='input.nml', iostat=io_status)
-  read(unit_nml,mpp_nml,iostat=io_status)
-  close(unit_nml)
-#endif
-
   if (io_status > 0) then
-     call mpp_error(FATAL,'=>mpp_init: Error reading input.nml')
+     call mpp_error(FATAL,'=>mpp_init: Error reading mpp_nml')
   endif
   if (t_level == 5) return
 
@@ -140,18 +134,14 @@
   if(etc_unit_is_stderr) then
      etc_unit = stderr()
   else
-! 9 is reserved for etc_unit
-     etc_unit=9
-     inquire(unit=etc_unit,opened=opened)
-     if(opened) call mpp_error(FATAL,'Unit 9 is already in use (etc_unit) in mpp_comm_mpi')
      if (trim(etcfile) /= '/dev/null') then
         write( etcfile,'(a,i6.6)' )trim(etcfile)//'.', pe
      endif
      inquire(file=etcfile, exist=existed)
      if(existed) then
-        open( unit=etc_unit, file=trim(etcfile), status='REPLACE' )
+        open( newunit=etc_unit, file=trim(etcfile), status='REPLACE' )
      else
-        open( unit=etc_unit, file=trim(etcfile) )
+        open( newunit=etc_unit, file=trim(etcfile) )
      endif
   endif
 
@@ -227,13 +217,13 @@
 end subroutine mpp_init
 
 !#######################################################################
-  !to be called at the end of a run
+  !> To be called at the end of a run
 subroutine mpp_exit()
   integer :: i, j, k, n, nmax, istat, out_unit, log_unit
   real    :: t, tmin, tmax, tavg, tstd
   real    :: m, mmin, mmax, mavg, mstd, t_total
   logical :: opened
-  type(mpp_type), pointer :: dtype
+  type(mpp_type), pointer :: dtype, next_dtype
 
   if( .NOT.module_is_initialized )return
   call mpp_set_current_pelist()
@@ -314,19 +304,18 @@ subroutine mpp_exit()
 
   call FLUSH( out_unit )
 
-! close down etc_unit: 9
   inquire(unit=etc_unit, opened=opened)
   if (opened) then
    call FLUSH (etc_unit)
    close(etc_unit)
   endif
 
-  ! Clear derived data types (skipping list head, mpp_byte)
+  ! Clear derived data types
   dtype => datatypes%head
-  do while (.not. associated(dtype))
-      dtype => dtype%next
-      dtype%counter = 1         ! Force deallocation
+  do while (associated(dtype))
+      next_dtype => dtype%next
       call mpp_type_free(dtype)
+      dtype => next_dtype
   end do
 
   call mpp_set_current_pelist()
@@ -339,7 +328,7 @@ subroutine mpp_exit()
 end subroutine mpp_exit
 
 !#######################################################################
-    !set the mpp_stack variable to be at least n LONG words long
+  !> Set the mpp_stack variable to be at least n LONG words long
   subroutine mpp_set_stack_size(n)
     integer, intent(in) :: n
     character(len=8)    :: text
@@ -1425,19 +1414,20 @@ subroutine mpp_type_free(dtype)
     dtype%counter = dtype%counter - 1
 
     if (dtype%counter < 1) then
-        ! De-register the datatype in MPI runtime
-        call MPI_Type_free(dtype%id, error)
-
         ! Remove from list
         dtype%prev => dtype%next
-
-        ! Remove from memory
-        if (allocated(dtype%sizes)) deallocate(dtype%sizes)
-        if (allocated(dtype%subsizes)) deallocate(dtype%subsizes)
-        if (allocated(dtype%starts)) deallocate(dtype%starts)
-        deallocate(dtype)
-
         datatypes%length = datatypes%length - 1
+
+        ! Free resources
+        deallocate(dtype%sizes)
+        deallocate(dtype%subsizes)
+        deallocate(dtype%starts)
+
+        ! User-defined datatype cleanup
+        if (dtype%id /= MPI_BYTE) then
+            call MPI_Type_free(dtype%id, error)
+            deallocate(dtype)
+        endif
     end if
 
     if (current_clock .NE. 0) &

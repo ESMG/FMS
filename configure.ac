@@ -25,7 +25,7 @@ AC_PREREQ([2.69])
 
 # Initialize with name, version, and support email address.
 AC_INIT([GFDL FMS Library],
-  [2021.02.0],
+  [2022.01.0-dev],
   [gfdl.climate.model.info@noaa.gov],
   [FMS],
   [https://www.gfdl.noaa.gov/fms])
@@ -50,7 +50,7 @@ LT_INIT()
 # is, then disable building shared libraries.  Note, the user can still override
 # this by using --enable-shared when running the configure script.
 AS_IF([test x${CRAYPE_VERSION:+yes} = "xyes"],[
-  AS_IF([test x${CRAYPE_LINK_TYP} = "xstatic"],
+  AS_IF([test x${CRAYPE_LINK_TYPE} = "xstatic"],
         [AC_DISABLE_SHARED])])
 
 
@@ -67,6 +67,12 @@ AC_ARG_WITH([mpi],
 AS_IF([test ${with_mpi:-yes} = yes],
   [with_mpi=yes],
   [with_mpi=no])
+AC_ARG_WITH([yaml],
+  [AS_HELP_STRING([--with-yaml],
+    [Build with YAML support.  This option will be ignored if --disable-fortran-flag-setting is also given. (Default no)])])
+AS_IF([test ${with_yaml:-no} = no],
+  [with_yaml=no],
+  [with_yaml=yes])
 AC_ARG_ENABLE([setting-flags],
   [AS_HELP_STRING([--enable-setting-flags],
     [Allow configure to set some compiler flags.  Disabling this will also disable any other --with or --enable options that set flags, and will only use user-provided falgs. (Default yes)])])
@@ -120,6 +126,19 @@ if test $with_mpi = yes; then
   # CPPFLAGS, {C,FC}FLAGS, LDFLAGS and LIBS options are given.
   AC_CHECK_HEADERS([mpi.h], [], [AC_MSG_ERROR([Can't find the MPI C header file.  Set CC/CPPFLAGS/CFLAGS])])
   AC_CHECK_FUNC([MPI_Init], [], [AC_MSG_ERROR([Can't find the MPI C library.  Set CC/LDFLAGS/LIBS])])
+fi
+
+# Require yaml
+if test $with_yaml = yes; then
+  AC_CHECK_HEADERS([yaml.h], [], [AC_MSG_ERROR(["Can't find the libYAML C header file.  Set CC/CPPFLAGS/CFLAGS"])])
+  AC_SEARCH_LIBS([yaml_parser_initialize], [yaml], [], [AC_MSG_ERROR(["Can't find the libYAML C library.  Set CC/LDFLAGS/LIBS"])])
+
+  #If the test pass, define use_yaml macro
+  AC_DEFINE([use_yaml], [1], [This is required to use yaml parser])
+
+  AM_CONDITIONAL([SKIP_PARSER_TESTS], false )
+else
+  AM_CONDITIONAL([SKIP_PARSER_TESTS], true )
 fi
 
 # Require netCDF
@@ -272,13 +291,13 @@ if test -n "$fc_version_info"; then
   FC_VERSION="$FC_VERSION ( $fc_version_info )"
 fi
 
-# Check if netcdf is version 4.7.4 to skip failing fms2_io tests
-AC_MSG_CHECKING([if netCDF 4.7.4 is loaded])
-if [ test "`nc-config --version`" == "netCDF 4.7.4" ]; then
-  AM_CONDITIONAL([SKIP_FMS2_IO_TESTS], true )
+# Check if gcc is 11.1 for class(*) select type bug
+AC_MSG_CHECKING([if gcc 11.1.0 is loaded])
+if [ test -n "`$FC --version | grep GNU | grep 11\.1\..`" ]; then
   AC_MSG_RESULT([yes])
+  AC_MSG_ERROR([Compilation with gcc and gfortran 11.1.0 is unsupported \
+by this version of FMS due to a bug in the compiler. Please use a different version of gcc/gfortran.])
 else
-  AM_CONDITIONAL([SKIP_FMS2_IO_TESTS], false )
   AC_MSG_RESULT([no])
 fi
 
@@ -337,6 +356,7 @@ AC_CONFIG_FILES([
   random_numbers/Makefile
   libFMS/Makefile
   docs/Makefile
+  parser/Makefile
   test_fms/test_common.sh
   test_fms/Makefile
   test_fms/diag_manager/Makefile
@@ -357,12 +377,8 @@ AC_CONFIG_FILES([
   test_fms/mosaic/Makefile
   test_fms/affinity/Makefile
   test_fms/coupler/Makefile
+  test_fms/parser/Makefile
   FMS.pc
   ])
 
 AC_OUTPUT()
-
-## if tests are being skipped, output warning at end of output
-if [ test "`nc-config --version`" == "netCDF 4.7.4" ]; then
-  AC_MSG_RESULT([Warning: netCDF v4.7.4 is loaded. Incompatible fms2_io tests will be skipped and there may be netCDF issues with model runs.])
-fi

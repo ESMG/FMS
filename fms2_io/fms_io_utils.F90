@@ -16,10 +16,15 @@
 !* You should have received a copy of the GNU Lesser General Public
 !* License along with FMS.  If not, see <http://www.gnu.org/licenses/>.
 !***********************************************************************
+!> @defgroup fms_io_utils_mod fms_io_utils_mod
+!> @ingroup fms2_io
+!> @brief Misc. utility routines for use in @ref fms2_io
 
 !> @file
-!! @brief Utility routines.
-!! @email gfdl.climate.model.info@noaa.gov
+!> @brief File for @ref fms_io_utils_mod
+
+!> @addtogroup fms_io_utils_mod
+!> @{
 module fms_io_utils_mod
 use, intrinsic :: iso_fortran_env, only: error_unit
 !use mpp_mod, only : get_ascii_file_num_lines_and_length, read_ascii_file
@@ -50,7 +55,6 @@ public :: allocate_array
 public :: put_array_section
 public :: get_array_section
 public :: get_data_type_string
-public :: get_checksum
 public :: string2
 public :: open_check
 public :: string_compare
@@ -63,28 +67,36 @@ public :: set_filename_appendix
 public :: get_instance_filename
 public :: nullify_filename_appendix
 
+!> @}
+
 !> @brief A linked list of strings
+!> @ingroup fms_io_utils_mod
 type :: char_linked_list
   character(len=128) :: string
   type(char_linked_list), pointer :: head => null()
 endtype char_linked_list
 
-
+!> @brief Converts a given integer or real into a character string
+!> @ingroup fms_io_utils_mod
 interface string2
   module procedure string_from_integer2
   module procedure string_from_real2
 end interface string2
 
+
+!> @ingroup fms_io_utils_mod
 interface parse_mask_table
   module procedure parse_mask_table_2d
   module procedure parse_mask_table_3d
 end interface parse_mask_table
 
+!> @ingroup fms_io_utils_mod
 interface get_mosaic_tile_file
   module procedure get_mosaic_tile_file_sg
   module procedure get_mosaic_tile_file_ug
 end interface get_mosaic_tile_file
 
+!> @ingroup fms_io_utils_mod
 interface allocate_array
   module procedure allocate_array_i4_kind_1d
   module procedure allocate_array_i4_kind_2d
@@ -115,6 +127,7 @@ interface allocate_array
 end interface allocate_array
 
 
+!> @ingroup fms_io_utils_mod
 interface put_array_section
   module procedure put_array_section_i4_kind_1d
   module procedure put_array_section_i4_kind_2d
@@ -139,6 +152,7 @@ interface put_array_section
 end interface put_array_section
 
 
+!> @ingroup fms_io_utils_mod
 interface get_array_section
   module procedure get_array_section_i4_kind_1d
   module procedure get_array_section_i4_kind_2d
@@ -163,6 +177,7 @@ interface get_array_section
 end interface get_array_section
 
 
+!> @ingroup fms_io_utils_mod
 interface get_data_type_string
   module procedure get_data_type_string_0d
   module procedure get_data_type_string_1d
@@ -172,16 +187,8 @@ interface get_data_type_string
   module procedure get_data_type_string_5d
 end interface get_data_type_string
 
-
-interface get_checksum
-  module procedure get_checksum_0d
-  module procedure get_checksum_1d
-  module procedure get_checksum_2d
-  module procedure get_checksum_3d
-  module procedure get_checksum_4d
-  module procedure get_checksum_5d
-end interface get_checksum
-
+!> @addtogroup fms_io_utils_mod
+!> @{
 contains
 
 
@@ -384,11 +391,11 @@ subroutine domain_tile_filepath_mangle(dest, source, domain_tile_id)
   integer :: i
 
   if (has_domain_tile_string(source)) then
-    call error("this file has already had a domain tile id added.")
+    call error("The file "//trim(source)//" has a domain tile id (tileX) added. Check your open_file call")
   endif
   i = index(trim(source), ".nc", back=.true.)
   if (i .eq. 0) then
-    call error("file "//trim(source)//" does not contain .nc")
+    call error("The file "//trim(source)//" does not contain .nc. Check your open_file call")
   endif
   write(dest, '(a,i0,a)') source(1:i-1)//".tile", &
                           domain_tile_id, source(i:len_trim(source))
@@ -430,7 +437,7 @@ subroutine io_domain_tile_filepath_mangle(dest, source, io_domain_tile_id)
   integer, intent(in) :: io_domain_tile_id !< I/O domain tile id.
 
   if (has_io_domain_tile_string(source)) then
-    call error("this file has already had a domain tile id added.")
+    call error("The file "//trim(source)//" has already had a domain tile id (.nc.XXXX) added. Check your open_file call.")
   endif
   write(dest,'(a,i4.4)') trim(source)//".", io_domain_tile_id
 end subroutine io_domain_tile_filepath_mangle
@@ -465,7 +472,7 @@ subroutine restart_filepath_mangle(dest, source)
   else
     i = index(trim(source), ".nc", back=.true.)
     if (i .eq. 0) then
-      call error("file "//trim(source)//" does not contain .nc")
+      call error("The file "//trim(source)//" does not contain .nc. Check your open_file call")
     endif
   endif
   call string_copy(dest, source(1:i-1)//".res"//source(i:len_trim(source)))
@@ -487,15 +494,20 @@ end subroutine open_check
 
 !> @brief Read the ascii text from filename `ascii_filename`into string array
 !! `ascii_var`
-subroutine ascii_read(ascii_filename, ascii_var)
+subroutine ascii_read(ascii_filename, ascii_var, num_lines, max_length)
   character(len=*), intent(in) :: ascii_filename !< The file name to be read
   character(len=:), dimension(:), allocatable, intent(out) :: ascii_var !< The
                                                                         !! string
                                                                         !! array
+  integer, optional, intent(out) :: num_lines !< Optional argument to return number of lines in file
+  integer, optional, intent(out) :: max_length !< Optional argument to return max_length of line in file
   integer, dimension(2) :: lines_and_length !< lines = 1, length = 2
+  if(allocated(ascii_var)) deallocate(ascii_var)
   lines_and_length = get_ascii_file_num_lines_and_length(ascii_filename)
   allocate(character(len=lines_and_length(2))::ascii_var(lines_and_length(1)))
   call read_ascii_file(ascii_filename, lines_and_length(2), ascii_var)
+  if(present(num_lines)) num_lines = lines_and_length(1)
+  if(present(max_length)) max_length = lines_and_length(2)
 end subroutine ascii_read
 
 !> @brief Populate 2D maskmap from mask_table given a model
@@ -717,7 +729,7 @@ subroutine get_mosaic_tile_file_sg(file_in, file_out, is_no_domain, domain, tile
   else
      lens = len_trim(file_in)
      if(file_in(lens-2:lens) .NE. '.nc') call mpp_error(FATAL, &
-          'fms_io_mod: .nc should be at the end of file '//trim(file_in))
+          'get_mosaic_tile_file_sg: .nc should be at the end of file '//trim(file_in))
      basefile = file_in(1:lens-3)
   end if
 
@@ -898,7 +910,8 @@ end function string_from_real2
 include "array_utils.inc"
 include "array_utils_char.inc"
 include "get_data_type_string.inc"
-include "get_checksum.inc"
 
 
 end module fms_io_utils_mod
+!> @}
+! close documentation grouping

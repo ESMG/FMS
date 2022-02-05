@@ -16,6 +16,8 @@
 !* You should have received a copy of the GNU Lesser General Public
 !* License along with FMS.  If not, see <http://www.gnu.org/licenses/>.
 !***********************************************************************
+!> @file
+!> @ingroup fms_netcdf_domain_io_mod
 
 !> @brief I/O domain root reads in  a domain decomposed variable at a
 !!        specific unlimited dimension level and scatters the data to the
@@ -133,7 +135,8 @@ subroutine domain_read_2d(fileobj, variable_name, vdata, unlim_dim_level, &
   endif
   io_domain => mpp_get_io_domain(fileobj%domain)
   call domain_offsets(size(vdata, xdim_index), size(vdata, ydim_index), fileobj%domain, &
-                      xpos, ypos, isd, isc, xc_size, jsd, jsc, yc_size, buffer_includes_halos)
+                      xpos, ypos, isd, isc, xc_size, jsd, jsc, yc_size, buffer_includes_halos, &
+                      msg="file:"//trim(fileobj%path)//" and variable:"//trim(variable_name))
   c(:) = 1
   e(:) = shape(vdata)
 
@@ -250,7 +253,7 @@ subroutine domain_read_2d(fileobj, variable_name, vdata, unlim_dim_level, &
           endif
           deallocate(buf_r8_kind)
         class default
-          call error("domain_read_2d: Unsupported type for variable: "//variable_name//" in file: "//trim(fileobj%path)//"")
+          call error("unsupported variable type: domain_read_2d: file: "//trim(fileobj%path)//" variable:"//trim(variable_name))
       end select
     enddo
     deallocate(pe_isc)
@@ -286,7 +289,7 @@ subroutine domain_read_2d(fileobj, variable_name, vdata, unlim_dim_level, &
         call put_array_section(buf_r8_kind, vdata, c, e)
         deallocate(buf_r8_kind)
       class default
-          call error("domain_read_2d: Unsupported type for variable: "//variable_name//" in file: "//trim(fileobj%path)//"")
+        call error("unsupported variable type: domain_read_2d: file: "//trim(fileobj%path)//" variable:"//trim(variable_name))
     end select
   endif
 end subroutine domain_read_2d
@@ -351,7 +354,8 @@ subroutine domain_read_3d(fileobj, variable_name, vdata, unlim_dim_level, &
   endif
   io_domain => mpp_get_io_domain(fileobj%domain)
   call domain_offsets(size(vdata, xdim_index), size(vdata, ydim_index), fileobj%domain, &
-                      xpos, ypos, isd, isc, xc_size, jsd, jsc, yc_size, buffer_includes_halos)
+                      xpos, ypos, isd, isc, xc_size, jsd, jsc, yc_size, buffer_includes_halos, &
+                      msg="file:"//trim(fileobj%path)//" and variable:"//trim(variable_name))
   c(:) = 1
   e(:) = shape(vdata)
 
@@ -468,7 +472,7 @@ subroutine domain_read_3d(fileobj, variable_name, vdata, unlim_dim_level, &
           endif
           deallocate(buf_r8_kind)
         class default
-          call error("domain_read_3d: Unsupported type for variable: "//variable_name//" in file: "//trim(fileobj%path)//"")
+          call error("unsupported variable type: domain_read_3d: file: "//trim(fileobj%path)//" variable:"//trim(variable_name))
       end select
     enddo
     deallocate(pe_isc)
@@ -504,7 +508,7 @@ subroutine domain_read_3d(fileobj, variable_name, vdata, unlim_dim_level, &
         call put_array_section(buf_r8_kind, vdata, c, e)
         deallocate(buf_r8_kind)
       class default
-          call error("domain_read_3d: Unsupported type for variable: "//variable_name//" in file: "//trim(fileobj%path)//"")
+        call error("unsupported variable type: domain_read_3d: file: "//trim(fileobj%path)//" variable:"//trim(variable_name))
     end select
   endif
 end subroutine domain_read_3d
@@ -569,7 +573,8 @@ subroutine domain_read_4d(fileobj, variable_name, vdata, unlim_dim_level, &
   endif
   io_domain => mpp_get_io_domain(fileobj%domain)
   call domain_offsets(size(vdata, xdim_index), size(vdata, ydim_index), fileobj%domain, &
-                      xpos, ypos, isd, isc, xc_size, jsd, jsc, yc_size, buffer_includes_halos)
+                      xpos, ypos, isd, isc, xc_size, jsd, jsc, yc_size, buffer_includes_halos, &
+                      msg="file:"//trim(fileobj%path)//" and variable:"//trim(variable_name))
   c(:) = 1
   e(:) = shape(vdata)
 
@@ -686,7 +691,7 @@ subroutine domain_read_4d(fileobj, variable_name, vdata, unlim_dim_level, &
           endif
           deallocate(buf_r8_kind)
         class default
-          call error("domain_read_4d: Unsupported type for variable: "//variable_name//" in file: "//trim(fileobj%path)//"")
+          call error("unsupported variable type: domain_read_4d: file: "//trim(fileobj%path)//" variable:"//trim(variable_name))
       end select
     enddo
     deallocate(pe_isc)
@@ -722,7 +727,7 @@ subroutine domain_read_4d(fileobj, variable_name, vdata, unlim_dim_level, &
         call put_array_section(buf_r8_kind, vdata, c, e)
         deallocate(buf_r8_kind)
       class default
-          call error("domain_read_4d: Unsupported type for variable: "//variable_name//" in file: "//trim(fileobj%path)//"")
+        call error("unsupported variable type: domain_read_4d: file: "//trim(fileobj%path)//" variable:"//trim(variable_name))
     end select
   endif
 end subroutine domain_read_4d
@@ -787,7 +792,8 @@ subroutine domain_read_5d(fileobj, variable_name, vdata, unlim_dim_level, &
   endif
   io_domain => mpp_get_io_domain(fileobj%domain)
   call domain_offsets(size(vdata, xdim_index), size(vdata, ydim_index), fileobj%domain, &
-                      xpos, ypos, isd, isc, xc_size, jsd, jsc, yc_size, buffer_includes_halos)
+                      xpos, ypos, isd, isc, xc_size, jsd, jsc, yc_size, buffer_includes_halos, &
+                      msg="file:"//trim(fileobj%path)//" and variable:"//trim(variable_name))
   c(:) = 1
   e(:) = shape(vdata)
 
@@ -906,7 +912,7 @@ subroutine domain_read_5d(fileobj, variable_name, vdata, unlim_dim_level, &
           endif
           deallocate(buf_r8_kind)
         class default
-          call error("domain_read_5d: Unsupported type for variable: "//variable_name//" in file: "//trim(fileobj%path)//"")
+          call error("unsupported variable type: domain_read_5d: file: "//trim(fileobj%path)//" variable:"//trim(variable_name))
       end select
     enddo
     deallocate(pe_isc)
@@ -942,7 +948,7 @@ subroutine domain_read_5d(fileobj, variable_name, vdata, unlim_dim_level, &
         call put_array_section(buf_r8_kind, vdata, c, e)
         deallocate(buf_r8_kind)
       class default
-          call error("domain_read_5d: Unsupported type for variable: "//variable_name//" in file: "//trim(fileobj%path)//"")
+        call error("unsupported variable type: domain_read_5d: file: "//trim(fileobj%path)//" variable:"//trim(variable_name))
     end select
   endif
 end subroutine domain_read_5d

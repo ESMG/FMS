@@ -19,6 +19,10 @@
 !* License along with FMS.  If not, see <http://www.gnu.org/licenses/>.
 !***********************************************************************
 
+!> @file
+!> @ingroup mpp
+!> @brief Routines to initialize and finalize @ref mpp_mod without MPI.
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
 !       ROUTINES TO INITIALIZE/FINALIZE MPP MODULE: mpp_init, mpp_exit        !
@@ -26,12 +30,14 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !    subroutine mpp_init( flags, in, out, err, log )
   !      integer, optional, intent(in) :: flags, in, out, err, log
-subroutine mpp_init( flags,localcomm )
+!> @brief Initialize the @ref mpp_mod module
+subroutine mpp_init( flags,localcomm, alt_input_nml_path )
   integer, optional, intent(in) :: flags
   integer, optional, intent(in) :: localcomm ! dummy here, used only in MPI
+  character(len=*), optional, intent(in) :: alt_input_nml_path
   integer                       :: my_pe, num_pes, len, i, logunit
   logical                       :: opened, existed
-  integer                       :: unit_begin, unit_end, unit_nml, io_status
+  integer                       :: io_status
 
   if( module_is_initialized )return
 
@@ -81,41 +87,27 @@ subroutine mpp_init( flags,localcomm )
   end if
 
   call mpp_init_logfile()
-  call read_input_nml
+  if (present(alt_input_nml_path)) then
+     call read_input_nml(alt_input_nml_path=alt_input_nml_path)
+  else
+     call read_input_nml
+  end if
 
   !--- read namelist
-#ifdef INTERNAL_FILE_NML
   read (input_nml_file, mpp_nml, iostat=io_status)
-#else
-  unit_begin = 103
-  unit_end   = 512
-  do unit_nml = unit_begin, unit_end
-     inquire( unit_nml,OPENED=opened )
-     if( .NOT.opened )exit
-  end do
-
-  open(unit_nml,file='input.nml', iostat=io_status)
-  read(unit_nml,mpp_nml,iostat=io_status)
-  close(unit_nml)
-#endif
-
   if (io_status > 0) then
-     call mpp_error(FATAL,'=>mpp_init: Error reading input.nml')
+     call mpp_error(FATAL,'=>mpp_init: Error reading mpp_nml')
   endif
 
 ! non-root pe messages written to other location than stdout()
-! 9 is reserved for etc_unit
-  etc_unit=9
-  inquire(unit=etc_unit,opened=opened)
-  if(opened) call mpp_error(FATAL,'Unit 9 is already in use (etc_unit) in mpp_comm_nocomm')
   if (trim(etcfile) /= '/dev/null') then
     write( etcfile,'(a,i6.6)' )trim(etcfile)//'.', pe
   endif
   inquire(file=etcfile, exist=existed)
   if(existed) then
-     open( unit=etc_unit, file=trim(etcfile), status='REPLACE' )
+     open( newunit=etc_unit, file=trim(etcfile), status='REPLACE' )
   else
-     open( unit=etc_unit, file=trim(etcfile) )
+     open( newunit=etc_unit, file=trim(etcfile) )
   endif
   !if optional argument logunit=stdout, write messages to stdout instead.
   !if specifying non-defaults, you must specify units not yet in use.
@@ -169,7 +161,7 @@ subroutine mpp_init( flags,localcomm )
 end subroutine mpp_init
 
 !#######################################################################
-  !to be called at the end of a run
+!> @brief To be called at the end of a run
 subroutine mpp_exit()
   integer :: i, j, k, n, nmax, istat, out_unit
   real    :: t, tmin, tmax, tavg, tstd
@@ -241,7 +233,6 @@ subroutine mpp_exit()
      end do
   end if
 
-! close down etc_unit: 9
   inquire(unit=etc_unit, opened=opened)
   if (opened) then
    call FLUSH (etc_unit)
@@ -257,7 +248,7 @@ subroutine mpp_exit()
 end subroutine mpp_exit
 
 !#######################################################################
-    !set the mpp_stack variable to be at least n LONG words long
+  !> Set the mpp_stack variable to be at least n LONG words long
   subroutine mpp_set_stack_size(n)
     integer, intent(in) :: n
     character(len=8)    :: text

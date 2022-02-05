@@ -16,31 +16,23 @@
 !* You should have received a copy of the GNU Lesser General Public
 !* License along with FMS.  If not, see <http://www.gnu.org/licenses/>.
 !***********************************************************************
+!> @defgroup diag_axis_mod diag_axis_mod
+!> @ingroup diag_manager
+!> @brief An integral part of @ref diag_manager_mod. It helps to create axis IDs
+!! that are used in @ref register_diag_field.
+!!
+!> @author Seth Underwood
+!!
+!! Users first create axis ID by calling diag_axis_init, then use this axis ID in
+!! register_diag_field.
 
 !> @file
-!! @brief is an integral part
-!!   of diag_manager_mod. It helps to create axis IDs
-!!   that are used in register_diag_field.
-!! @author Seth Underwood
-!! @email gfdl.climate.model.info@noaa.gov
-!! @description Users first create axis ID by calling
-!!   diag_axis_init, then use this axis ID in
-!!   register_diag_field.
+!> @brief File for @ref diag_axis_mod
+
+!> @addtogroup diag_axis_mod
+!> @{
 MODULE diag_axis_mod
 use platform_mod
-  ! <CONTACT EMAIL="seth.underwood@noaa.gov">
-  !   Seth Underwood
-  ! </CONTACT>
-
-  ! <OVERVIEW> <TT>diag_axis_mod</TT> is an integral part
-  !   of diag_manager_mod. It helps to create axis IDs
-  !   that are used in register_diag_field.
-  ! </OVERVIEW>
-
-  ! <DESCRIPTION> Users first create axis ID by calling
-  !   diag_axis_init, then use this axis ID in
-  !   register_diag_field.
-  ! </DESCRIPTION>
 
   USE mpp_domains_mod, ONLY: domainUG, domain1d, domain2d, mpp_get_compute_domain,&
        & mpp_get_domain_components, null_domain1d, null_domain2d, null_domainUG,&
@@ -67,49 +59,37 @@ use platform_mod
        & get_compressed_axes_ids, get_axis_reqfld, &
        & NORTH, EAST, CENTER
 
-  ! Module variables
-  ! Parameters
   ! Include variable "version" to be written to log file
 #include<file_version.h>
 
 !----------
-!ug support
-  integer(I4_KIND),parameter,public :: DIAG_AXIS_NODOMAIN = 0
-  integer(I4_KIND),parameter,public :: DIAG_AXIS_2DDOMAIN = 1
-  integer(I4_KIND),parameter,public :: DIAG_AXIS_UGDOMAIN = 2
+  integer(I4_KIND),parameter,public :: DIAG_AXIS_NODOMAIN = 0 !< For unstructured grid support
+  integer(I4_KIND),parameter,public :: DIAG_AXIS_2DDOMAIN = 1 !< For unstructured grid support
+  integer(I4_KIND),parameter,public :: DIAG_AXIS_UGDOMAIN = 2 !< For unstructured grid support
 !----------
 
-  ! counter of number of axes defined
   INTEGER, DIMENSION(:), ALLOCATABLE :: num_subaxes !< counter of number of axes defined
   INTEGER :: num_def_axes = 0
 
-  ! storage for axis set names
   CHARACTER(len=128), DIMENSION(:), ALLOCATABLE, SAVE :: Axis_sets !< storage for axis set names
   INTEGER :: num_axis_sets = 0
 
-  ! ---- global storage for all defined axes ----
-  TYPE(diag_axis_type), ALLOCATABLE, SAVE :: Axes(:) !< ---- global storage for all defined axes ----
+  TYPE(diag_axis_type), ALLOCATABLE, SAVE :: Axes(:) !< global storage for all defined axes
   LOGICAL :: module_is_initialized = .FALSE.
 
-  ! <INTERFACE NAME="diag_axis_add_attribute">
-  !   <OVERVIEW>
-  !     Add a attribute to the diag axis
-  !   </OVERVIEW>
-  !   <TEMPLATE>
-  !     SUBROUTINE diag_axis_add_attribute(diag_axis_id, att_name, att_value)
-  !   </TEMPLATE>
-  !   <DESCRIPTION>
-  !     Add an arbitrary attribute and value to the diagnostic axis.  Any number
-  !     of attributes can be added to a given axis.  All attribute addition must
-  !     be done before first <TT>send_data</TT> call.
-  !
-  !     If a real or integer attribute is already defined, a FATAL error will be called.
-  !     If a character attribute is already defined, then it will be prepended to the
-  !     existing attribute value.
-  !   </DESCRIPTION>
-  !   <IN NAME="diag_axis_id" TYPE="INTEGER" />
-  !   <IN NAME="att_name" TYPE="CHARACTER(len=*)" />
-  !   <IN NAME="att_value" TYPE="REAL|INTEGER|CHARACTER(len=*)" />
+  !> @}
+
+  !> @brief Add an arbitrary attribute and value to the diagnostic axis.
+  !!
+  !> Any number of attributes can be added to a given axis.  All attribute addition must
+  !! be done before first <TT>send_data</TT> call.<br>
+  !!
+  !! If a real or integer attribute is already defined, a FATAL error will be called.
+  !! If a character attribute is already defined, then it will be prepended to the
+  !! existing attribute value.
+  !! <br>Example usage:
+  !! @code{.F90} call diag_axis_add_attribute(diag_axis_id, att_name, att_value) @endcode
+  !> @ingroup diag_axis_mod
   INTERFACE diag_axis_add_attribute
      MODULE PROCEDURE diag_axis_add_attribute_scalar_r
      MODULE PROCEDURE diag_axis_add_attribute_scalar_i
@@ -117,19 +97,23 @@ use platform_mod
      MODULE PROCEDURE diag_axis_add_attribute_r1d
      MODULE PROCEDURE diag_axis_add_attribute_i1d
   END INTERFACE diag_axis_add_attribute
-  ! </INTERFACE>
+
+  !> @addtogroup diag_axis_mod
+  !> @{
 
 CONTAINS
 
   !> @brief Initialize the axis, and return the axis ID.
+  !!
+  !> <TT>diag_axis_init</TT> initializes an axis and returns the axis ID that
+  !! is to be used with <TT>register_diag_field</TT>.  This function also
+  !! increments the axis counter and fills in the axes
+  !!
   !! @return integer axis ID
-  !! @description <TT>diag_axis_init</TT> initializes an axis and returns the axis ID that
-  !!     is to be used with <TT>register_diag_field</TT>.  This function also
-  !!     increments the axis counter and fills in the axes
   INTEGER FUNCTION diag_axis_init(name, DATA, units, cart_name, long_name, direction,&
        & set_name, edges, Domain, Domain2, DomainU, aux, req, tile_count, domain_position )
     CHARACTER(len=*), INTENT(in) :: name !< Short name for axis
-    REAL, DIMENSION(:), INTENT(in) :: DATA !< Array of coordinate values
+    CLASS(*), DIMENSION(:), INTENT(in) :: DATA !< Array of coordinate values
     CHARACTER(len=*), INTENT(in) :: units !< Units for the axis
     CHARACTER(len=*), INTENT(in) :: cart_name !< Cartesian axis ("X", "Y", "Z", "T")
     CHARACTER(len=*), INTENT(in), OPTIONAL :: long_name !< Long name for the axis.
@@ -247,7 +231,15 @@ CONTAINS
 
     ! Initialize Axes(diag_axis_init)
     Axes(diag_axis_init)%name   = TRIM(name)
-    Axes(diag_axis_init)%data   = DATA(1:axlen)
+    SELECT TYPE (DATA)
+    TYPE IS (real(kind=r4_kind))
+       Axes(diag_axis_init)%data = DATA(1:axlen)
+    TYPE IS (real(kind=r8_kind))
+       Axes(diag_axis_init)%data = real(DATA(1:axlen))
+    CLASS DEFAULT
+       CALL error_mesg('diag_axis_mod::diag_axis_init',&
+            & 'The axis data is not one of the supported types of real(kind=4) or real(kind=8)', FATAL)
+    END SELECT
     Axes(diag_axis_init)%units  = units
     Axes(diag_axis_init)%length = axlen
     Axes(diag_axis_init)%set    = set
@@ -373,13 +365,16 @@ CONTAINS
     module_is_initialized = .TRUE.
 
   END FUNCTION diag_axis_init
+
   !> @brief Create a subaxis on a parent axis.
-  !! @return Integer ID of the corresponding subaxis.
-  !! @description Given the ID of a parent axis, create a subaxis and fill it with data,
+  !!
+  !> Given the ID of a parent axis, create a subaxis and fill it with data,
   !!     and return the ID of the corresponding subaxis.
   !!
   !!     The subaxis is defined on the parent axis from <TT>start_indx</TT>
   !!     to <TT>end_indx</TT>.
+  !!
+  !! @return Integer ID of the corresponding subaxis.
   INTEGER FUNCTION diag_subaxes_init(axis, subdata, start_indx, end_indx, domain_2d)
     INTEGER, INTENT(in) :: axis !< ID of the parent axis
     REAL, DIMENSION(:), INTENT(in) :: subdata !< Data of the subaxis
@@ -470,10 +465,10 @@ CONTAINS
     INTEGER, INTENT(in) :: id !< Axis ID
     TYPE(domain1d), INTENT(out) :: Domain
     TYPE(domainUG), INTENT(out) :: DomainU
-    INTEGER, INTENT(out) :: direction !< Direction of data. (See <TT>diag_axis_init</TT> for a description of
+    INTEGER, INTENT(out) :: direction !< Direction of data. (See <TT>@ref diag_axis_init</TT> for a description of
                                       !! allowed values)
     INTEGER, INTENT(out) :: edges !< Axis ID for the previously defined "edges axis".
-    REAL, DIMENSION(:), INTENT(out) :: DATA !< Array of coordinate values for this axis.
+    CLASS(*), DIMENSION(:), INTENT(out) :: DATA !< Array of coordinate values for this axis.
     INTEGER, INTENT(out), OPTIONAL :: num_attributes
     TYPE(diag_atttype), ALLOCATABLE, DIMENSION(:), INTENT(out), OPTIONAL :: attributes
     INTEGER, INTENT(out), OPTIONAL :: domain_position
@@ -494,7 +489,15 @@ CONTAINS
        ! <ERROR STATUS="FATAL">array data is too small.</ERROR>
        CALL error_mesg('diag_axis_mod::get_diag_axis', 'array data is too small', FATAL)
     ELSE
-       DATA(1:Axes(id)%length) = Axes(id)%data(1:Axes(id)%length)
+       SELECT TYPE (DATA)
+       TYPE IS (real(kind=r4_kind))
+          DATA(1:Axes(id)%length) = real(Axes(id)%data(1:Axes(id)%length), kind=r4_kind)
+       TYPE IS (real(kind=r8_kind))
+          DATA(1:Axes(id)%length) = Axes(id)%data(1:Axes(id)%length)
+       CLASS DEFAULT
+          CALL error_mesg('diag_axis_mod::get_diag_axis',&
+               & 'The axis data is not one of the supported types of real(kind=4) or real(kind=8)', FATAL)
+       END SELECT
     END IF
     IF ( PRESENT(num_attributes) ) THEN
        num_attributes = Axes(id)%num_attributes
@@ -1035,10 +1038,6 @@ CONTAINS
     END IF
   END SUBROUTINE diag_axis_attribute_init
 
-  ! <SUBROUTINE NAME="diag_axis_add_attribute_scalar_r" INTERFACE="diag_axis_add_attribute">
-  !   <IN NAME="diag_axis_id" TYPE="INTEGER" />
-  !   <IN NAME="att_name" TYPE="CHARACTER(len=*)" />
-  !   <IN NAME="att_value" TYPE="REAL" />
   SUBROUTINE diag_axis_add_attribute_scalar_r(diag_axis_id, att_name, att_value)
     INTEGER, INTENT(in) :: diag_axis_id
     CHARACTER(len=*), INTENT(in) :: att_name
@@ -1046,12 +1045,7 @@ CONTAINS
 
     CALL diag_axis_add_attribute_r1d(diag_axis_id, att_name, (/ att_value /))
   END SUBROUTINE diag_axis_add_attribute_scalar_r
-  ! </SUBROUTINE>
 
-  ! <SUBROUTINE NAME="diag_axis_add_attribute_scalar_i" INTERFACE="diag_axis_add_attribute">
-  !   <IN NAME="diag_axis_id" TYPE="INTEGER" />
-  !   <IN NAME="att_name" TYPE="CHARACTER(len=*)" />
-  !   <IN NAME="att_value" TYPE="INTEGER" />
   SUBROUTINE diag_axis_add_attribute_scalar_i(diag_axis_id, att_name, att_value)
     INTEGER, INTENT(in) :: diag_axis_id
     CHARACTER(len=*), INTENT(in) :: att_name
@@ -1059,12 +1053,7 @@ CONTAINS
 
     CALL diag_axis_add_attribute_i1d(diag_axis_id, att_name, (/ att_value /))
   END SUBROUTINE diag_axis_add_attribute_scalar_i
-  ! </SUBROUTINE>
 
-  ! <SUBROUTINE NAME="diag_axis_add_attribute_scalar_c" INTERFACE="diag_axis_add_attribute">
-  !   <IN NAME="diag_axis_id" TYPE="INTEGER" />
-  !   <IN NAME="att_name" TYPE="CHARACTER(len=*)" />
-  !   <IN NAME="att_value" TYPE="CHARACTER(len=*)" />
   SUBROUTINE diag_axis_add_attribute_scalar_c(diag_axis_id, att_name, att_value)
     INTEGER, INTENT(in) :: diag_axis_id
     CHARACTER(len=*), INTENT(in) :: att_name
@@ -1072,12 +1061,7 @@ CONTAINS
 
     CALL diag_axis_attribute_init(diag_axis_id, att_name, NF90_CHAR, cval=att_value)
   END SUBROUTINE diag_axis_add_attribute_scalar_c
-  ! </SUBROUTINE>
 
-  ! <SUBROUTINE NAME="diag_axis_add_attribute_r1d" INTERFACE="diag_axis_add_attribute">
-  !   <IN NAME="diag_axis_id" TYPE="INTEGER" />
-  !   <IN NAME="att_name" TYPE="CHARACTER(len=*)" />
-  !   <IN NAME="att_value" TYPE="REAL, DIMENSION(:)" />
   SUBROUTINE diag_axis_add_attribute_r1d(diag_axis_id, att_name, att_value)
     INTEGER, INTENT(in) :: diag_axis_id
     CHARACTER(len=*), INTENT(in) :: att_name
@@ -1088,12 +1072,7 @@ CONTAINS
 
     CALL diag_axis_attribute_init(diag_axis_id, att_name, NF90_FLOAT, rval=att_value)
   END SUBROUTINE diag_axis_add_attribute_r1d
-  ! </SUBROUTINE>
 
-  ! <SUBROUTINE NAME="diag_axis_add_attribute_i1d" INTERFACE="diag_axis_add_attribute">
-  !   <IN NAME="diag_axis_id" TYPE="INTEGER" />
-  !   <IN NAME="att_name" TYPE="CHARACTER(len=*)" />
-  !   <IN NAME="att_value" TYPE="INTEGER, DIMENSION(:)" />
   SUBROUTINE diag_axis_add_attribute_i1d(diag_axis_id, att_name, att_value)
     INTEGER, INTENT(in) :: diag_axis_id
     CHARACTER(len=*), INTENT(in) :: att_name
@@ -1301,3 +1280,5 @@ CONTAINS
     end associate ! axis
   end subroutine get_compressed_axes_ids
 END MODULE diag_axis_mod
+!> @}
+! close documentation grouping

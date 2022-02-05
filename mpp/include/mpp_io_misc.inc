@@ -18,6 +18,9 @@
 !* You should have received a copy of the GNU Lesser General Public
 !* License along with FMS.  If not, see <http://www.gnu.org/licenses/>.
 !***********************************************************************
+!> @file
+!> @ingroup mpp_io_mod
+!> @brief Misc. routines including initialization and finalization of @ref mpp_io_mod
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                      !
@@ -46,7 +49,7 @@
 
     subroutine mpp_io_init( flags, maxunit )
       integer, intent(in), optional :: flags, maxunit
-      integer                       :: unit_nml, io_status, iunit
+      integer                       :: io_status, iunit
       integer                       :: logunit, outunit, inunit, errunit
       logical                       :: opened
       real(r8_kind)             :: doubledata = 0
@@ -68,30 +71,19 @@
           verbose = flags.EQ.MPP_VERBOSE .OR. debug
       end if
 
-!set range of allowed fortran unit numbers: could be compiler-dependent (should not overlap stdin/out/err)
-      call mpp_set_unit_range( 103, maxunits )
-
       !--- namelist
-#ifdef INTERNAL_FILE_NML
       read (input_nml_file, mpp_io_nml, iostat=io_status)
-#else
-      do unit_nml = unit_begin, unit_end
-         inquire( unit_nml,OPENED=opened )
-         if( .NOT.opened )exit
-      end do
-      open(unit_nml,file='input.nml')
-      read(unit_nml,mpp_io_nml,iostat=io_status)
-      close(unit_nml)
-#endif
-
       if (io_status > 0) then
-         call mpp_error(FATAL,'=>mpp_io_init: Error reading input.nml')
+         call mpp_error(FATAL,'=>mpp_io_init: Error reading mpp_io_nml')
       endif
 
 
       outunit = stdout(); logunit=stdlog()
       write(outunit, mpp_io_nml)
       write(logunit, mpp_io_nml)
+
+      unit_begin = 103
+      unit_end = maxunits
 
 !--- check the deflate level, set deflate = 1 if deflate_level is greater than equal to 0
       if(deflate_level .GE. 0) deflate = 1
@@ -168,11 +160,15 @@
       mpp_file(NULLUNIT)%opened = .TRUE.
       mpp_file(NULLUNIT)%valid  = .TRUE.
       mpp_file(NULLUNIT)%initialized = .TRUE.
-!declare the stdunits to be open
-      mpp_file(outunit)%opened = .TRUE.
-      mpp_file(logunit)%opened = .TRUE.
-      inunit  = stdin()  ; mpp_file(inunit)%opened  = .TRUE.
-      errunit = stderr() ; mpp_file(errunit)%opened = .TRUE.
+!! Declare the stdunits to be open
+!! Because the stdunits are created with the newunit intrinsic function in some cases,
+!! only open up an mpp_file array for units that are within the allocated scope of mpp_file
+      if (outunit > NULLUNIT .AND. outunit < 2*maxunits) mpp_file(outunit)%opened = .TRUE.
+      if (logunit > NULLUNIT .AND. logunit < 2*maxunits) mpp_file(logunit)%opened = .TRUE.
+      inunit  = stdin()
+      if (inunit > NULLUNIT .AND. inunit < 2*maxunits) mpp_file(inunit)%opened  = .TRUE.
+      errunit = stderr()
+      if (errunit > NULLUNIT .AND. errunit < 2*maxunits) mpp_file(errunit)%opened = .TRUE.
 
       if( pe.EQ.mpp_root_pe() )then
           iunit = stdlog()  ! PGI compiler does not like stdlog() doing I/O within write call
