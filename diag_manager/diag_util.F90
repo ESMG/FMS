@@ -2266,7 +2266,8 @@ CONTAINS
     ! If write time is greater (equal for the last call) than last_flush for this file, flush it
     IF ( final_call ) THEN
        IF ( time >= files(file)%last_flush ) THEN
-          CALL diag_flush(files(file)%file_unit)
+!         CALL diag_flush(files(file)%file_unit)
+          call diag_flush(file, fileobjU, fileobj, fileobjND, fnum_for_domain(file))
           files(file)%last_flush = time
        END IF
     ELSE
