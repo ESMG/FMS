@@ -730,7 +730,7 @@
                          & mpp_file(unit)%Axis(dimid)%Att(j)%fatt
                     deallocate(r8vals)
                  case default
-                    call mpp_error( FATAL, 'Invalid data type for dimension at' )
+                    call mpp_error( FATAL, 'Invalid data type for dimension ATT '//trim(attname) )
                  end select
                  ! assign pre-defined axis attributes
                  select case(trim(attname))
